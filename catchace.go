@@ -67,7 +67,6 @@ func (r *CatchAce) Init() {
 	r.counter = make(map[string]int)
 	r.sake = 0
 	r.status = "wait"
-
 }
 
 // 重新洗牌
@@ -78,7 +77,7 @@ func (r *CatchAce) shuffleCard() {
 		"C", // 梅花:C-Club
 		"D", // 方块:D-Diamond
 	}
-	cardNumbers := []string{"10", "J", "Q", "K", "A",}
+	cardNumbers := []string{"10", "J", "Q", "K", "A"}
 	// 清空已有卡
 	r.cards = []string{}
 	for _, num := range cardNumbers {
@@ -96,7 +95,6 @@ func (r *CatchAce) shuffleCard() {
 // 启动游戏
 func (r *CatchAce) Run() {
 	r.status = "gaming"
-
 	for {
 		// 1. 选择出待抽卡的玩家
 		nextPlayer := r.choosePlayer()

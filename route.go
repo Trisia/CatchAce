@@ -11,9 +11,15 @@ func routeConfig(r *gin.Engine) {
 	r.GET("/cnn", func(c *gin.Context) {
 		useConnect(c.Writer, c.Request)
 	})
-	// 摸A游戏的
+	// 摸A游戏路由
 	//
 	r.POST("/CatchAce/create", createCatchAce)
 	// 获取房间列表
-	r.GET("/CatchAce", listCatchAceRoom())
+	r.GET("/CatchAce", listCatchAce)
+	// 加入房间
+	r.POST("/CatchAce/join", joinCatchAce)
+	// 退出游戏
+	r.DELETE("/CatchAce/player", catchAceExit)
+	// 开始/重启 游戏
+	r.GET("/CatchAce/start", catchAceStart)
 }
