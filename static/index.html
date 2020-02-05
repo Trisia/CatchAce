@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hello</title>
+</head>
+<body>
+<h1>Hello</h1>
+
+</body>
+<script>
+    var cnn;
+    var username = "Player|" + Math.ceil(Math.random() * 100);
+    window.onload = function () {
+        if (window["WebSocket"]) {
+            conn = new WebSocket("ws://" + document.location.host + "/cnn");
+            conn.onclose = onClose;
+            conn.onmessage = onMsg;
+            conn.onopen = onOpen;
+        } else {
+            console.error("Your browser does not support WebSockets.");
+        }
+    };
+
+    function onClose(evt) {
+        console.warn("<< Connection close:", evt);
+    }
+
+    function onMsg(evt) {
+        var messages = evt.data;
+        console.log(">>", messages);
+    }
+
+    function onOpen(evt) {
+        conn.send(username);
+        console.log(">>",username, "Connected")
+    }
+
+
+</script>
+</html>
