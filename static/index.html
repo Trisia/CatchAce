@@ -43,7 +43,7 @@
     <div id="game">
         <h1>房间: {{gameVal.roomName}}</h1>
         <div id="controller">
-            <button v-if="gameVal.roomOwner">开始游戏</button>
+            <button v-if="gameVal.roomOwner && status != 'Gaming'" @click="restartGame">开始游戏</button>
             <button @click="exit">离开房间</button>
         </div>
     </div>
@@ -59,13 +59,14 @@
      - Online 连接完成在大厅中
      - InRoom 在房间中
      - Gaming 游戏中
+     - End - 游戏结束
      */
     const GameStatus = {
         "Offline": "Offline",
         "Online": "Online",
         "InRoom": "InRoom",
         "Gaming": "Gaming",
-        "EndReport": "EndReport"
+        "End": "End"
     };
 
     var app = new Vue({
@@ -103,7 +104,8 @@
         methods: {
             // 开始/重开游戏
             restartGame: function () {
-
+                axios.get('/CatchAce/start?roomName='
+                    + this.gameVal.roomName);
             },
             // 退出房间
             exit: function () {

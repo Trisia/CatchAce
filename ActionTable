@@ -7,5 +7,6 @@ Notice - 通知某玩家抽到卡
 RequestJ - 请求加酒
 AddSake - 公告加酒数量
 Punish - 罚酒
-EndOfGame - 游戏结束
+StartGame - 开始游戏
+EndGame - 游戏结束
 OwnerExit - 房主退出了游戏

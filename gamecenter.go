@@ -84,5 +84,6 @@ func catchAceStart(c *gin.Context) {
 	room := Games[roomName]
 	log.Printf("房间: [%s] CatchA 开始游戏...", roomName)
 	room.Init()
+	room.Broadcast(Msg{Action: "StartGame"})
 	go room.Run()
 }
