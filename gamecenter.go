@@ -47,7 +47,6 @@ func listCatchAce(c *gin.Context) {
 func joinCatchAce(c *gin.Context) {
 	roomName := c.PostForm("roomName")
 	userName := c.PostForm("username")
-	fmt.Println(OnlineUses)
 	room := Games[roomName]
 	if room == nil {
 		c.String(http.StatusBadRequest, fmt.Sprintf("房间 [%s] 不存在，无法加入房间", roomName))

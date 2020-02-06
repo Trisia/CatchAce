@@ -3,15 +3,14 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"time"
 )
 
 type Player struct {
-	username string        // 玩家名称
-	out      chan<- []byte // 发送通道
-	in       <-chan []byte // 收取通道
-	cards    []string      // 已经抽到的卡
+	username string      // 玩家名称
+	out      chan []byte // 输出到客户端channel
+	in       chan []byte // 从客户端读取channel
+	cards    []string    // 已经抽到的卡
 }
 
 // 发送并等待回复
@@ -22,7 +21,6 @@ func (p *Player) Request(msg Msg) (resp Msg) {
 		panic(err)
 	}
 	// 发送
-	log.Printf("<< %s", bins)
 	p.out <- bins
 	// 等待回复
 	return p.WaitMsg()
@@ -35,7 +33,6 @@ func (p *Player) Send(msg Msg) {
 		if err != nil {
 			panic(err)
 		}
-		log.Printf("<< %s", bins)
 		// 发送
 		p.out <- bins
 	}()
@@ -48,7 +45,6 @@ func (p *Player) SendMsg(action, data string) {
 // 等待收到消息
 func (p *Player) WaitMsg() (resp Msg) {
 	reply := <-p.in
-	log.Printf(">> %s", reply)
 	err := json.Unmarshal(reply, resp)
 	if err != nil {
 		panic(err)
@@ -64,7 +60,6 @@ func (p *Player) RequestTT(msg Msg, duration time.Duration) (resp Msg, err error
 		panic(err)
 	}
 	// 发送
-	log.Printf("<< %s", bins)
 	p.out <- bins
 
 	timeout := make(chan bool)
@@ -74,7 +69,6 @@ func (p *Player) RequestTT(msg Msg, duration time.Duration) (resp Msg, err error
 	}()
 	select {
 	case reply := <-p.in:
-		log.Printf(">> %s", reply)
 		err := json.Unmarshal(reply, resp)
 		if err != nil {
 			panic(err)

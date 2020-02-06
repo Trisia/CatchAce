@@ -32,9 +32,9 @@ type OnlineUse struct {
 	// 用户名，由连接建立后第一条消息决定
 	username string
 	// 输出到客户端channel
-	out chan<- []byte
+	out chan []byte
 	// 从客户端读取channel
-	in <-chan []byte
+	in chan []byte
 }
 
 func (o *OnlineUse) Player() *Player {
@@ -62,8 +62,8 @@ func (c *OnlineUse) readPump() {
 			}
 			break
 		}
-		log.Printf("<< [%s]: %s", c.username, message)
-		go func() { c.out <- message }()
+		log.Printf(">> [%s]: %s", c.username, message)
+		go func() { c.in <- message }()
 	}
 }
 
@@ -76,22 +76,19 @@ func (c *OnlineUse) writePump() {
 	}()
 	for {
 		select {
-		case message, ok := <-c.in:
+		case message, ok := <-c.out:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			w, err := c.conn.NextWriter(websocket.TextMessage)
+			err := c.conn.WriteMessage(websocket.TextMessage, message)
 			if err != nil {
+				log.Println("write:", err)
 				return
 			}
-			log.Printf(">> [%s]: %s", c.username, message)
-			w.Write(message)
-			if err := w.Close(); err != nil {
-				return
-			}
+			log.Printf("<< [%s]: %s", c.username, message)
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
@@ -151,8 +148,8 @@ func useConnect(w http.ResponseWriter, r *http.Request) {
 	client := OnlineUse{
 		conn:     conn,
 		username: username,
-		out:      make(chan<- []byte),
-		in:       make(<-chan []byte),
+		out:      make(chan []byte),
+		in:       make(chan []byte),
 	}
 	// 加入在线用户列表
 	OnlineUses[username] = &client
