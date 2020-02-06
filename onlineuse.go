@@ -37,11 +37,11 @@ type OnlineUse struct {
 	in <-chan []byte
 }
 
-func (o *OnlineUse) Player() *Player{
+func (o *OnlineUse) Player() *Player {
 	return &Player{
 		username: o.username,
-		in: o.in,
-		out: o.out,
+		in:       o.in,
+		out:      o.out,
 	}
 }
 
@@ -101,11 +101,32 @@ func (c *OnlineUse) writePump() {
 	}
 }
 
+// 删除玩家所拥有的房间
+func (c *OnlineUse) DeleteRoom() {
+	for roomName, room := range Games {
+		// 找到该用户创建的所有房间
+		if room.manager.username == c.username {
+			log.Printf(">> 因为房主: [%s]退出，删除房间: [%s]", c.username, roomName)
+			delete(Games, roomName)
+			// 通知其他玩家房主下线，房间解散
+			for _, player := range room.players {
+				if player.username == c.username {
+					// 跳过房主
+					continue
+				}
+				player.Send(Msg{Action: "OwnerExit"})
+			}
+		}
+	}
+}
+
 // Close 客户端关闭
 func (c *OnlineUse) Close() {
-	log.Printf(">> Use [%s] Disconnect.")
+	log.Printf(">> Use [%s] Disconnect.", c.username)
 	// 从在线用户列表中注销
 	delete(OnlineUses, c.username)
+	// 删除用户创建的房间
+	c.DeleteRoom()
 	c.conn.Close()
 }
 

@@ -23,9 +23,9 @@ type CatchAce struct {
 }
 
 type Msg struct {
-	username string
-	action   string // 动作名称
-	data     string // 动作数据
+	Username string
+	Action   string // 动作名称
+	Data     string // 动作数据
 }
 
 // 创建一个新的游戏房间
@@ -105,8 +105,8 @@ func (r *CatchAce) Run() {
 		}
 		// 3. 通知当前玩家正在抽卡
 		r.Broadcast(Msg{
-			username: nextPlayer.username,
-			action:   "Drawing",
+			Username: nextPlayer.username,
+			Action:   "Drawing",
 		})
 		// 4. 等待玩家确定抽卡
 		nextPlayer.WaitMsg()
@@ -114,9 +114,9 @@ func (r *CatchAce) Run() {
 		card := r.drawCard(nextPlayer)
 		// 6. 广播抽到的卡
 		r.Broadcast(Msg{
-			username: nextPlayer.username,
-			action:   "Notice",
-			data:     card,
+			Username: nextPlayer.username,
+			Action:   "Notice",
+			Data:     card,
 		})
 		// 7. 处理抽到的卡。
 		endOfGame := r.processCard(card, nextPlayer)
@@ -126,9 +126,9 @@ func (r *CatchAce) Run() {
 			}
 
 			r.Broadcast(Msg{
-				username: nextPlayer.username,
-				action:   "EndOfGame",
-				data:     strconv.Itoa(r.sake),
+				Username: nextPlayer.username,
+				Action:   "EndOfGame",
+				Data:     strconv.Itoa(r.sake),
 			})
 			r.status = "End"
 			break
@@ -178,18 +178,18 @@ func (r *CatchAce) skipDrawCard(p *Player) bool {
 	}
 	// 询问是否使用Q
 	resp := p.Request(Msg{
-		username: p.username,
-		action:   "ReqUseQ",
+		Username: p.username,
+		Action:   "ReqUseQ",
 	})
-	parseBool, err := strconv.ParseBool(resp.data)
+	parseBool, err := strconv.ParseBool(resp.Data)
 	if err != nil {
 		panic(err)
 	}
 	if parseBool {
 		// 广播某人使用Q
 		r.Broadcast(Msg{
-			username: p.username,
-			data:     "UsedQ",
+			Username: p.username,
+			Data:     "UsedQ",
 		})
 	}
 	return parseBool

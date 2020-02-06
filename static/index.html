@@ -3,38 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <title>Hello</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style type="text/css">
+        .room {
+            margin: 5px;
+            padding: 2px;
+            border: 1px solid #000000;
+            width: 70px;
+            display: inline-block;
+        }
+    </style>
 </head>
 <body>
-<h1>Hello</h1>
+<div id="app">
+    <div id="gameCenter" v-if="status == 'Offline' || status == 'Online'">
+        <div>
+            用户名: <input type="text" v-model="username">
+            <button @click="checkAndConnect">连接</button>
+        </div>
+        <div v-if="status == 'Online'">
+            <div>
+                <p>创建房间:</p>
+                <input type="text" v-model="newRoomName">
+                <button @click="createRoom">创建</button>
+            </div>
+            <div>
+                <p>房间列表:</p>
+                <div class="room"
+                     v-for="room in roomList"
+                     :title="roomDesp(room)"
+                     @click="join(room)">
+                    <p>{{room.roomName}}</p>
+                    <p>{{room.status}}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="game">
+        <h1>房间: {{gameVal.roomName}}</h1>
+        <div id="controller">
+            <button v-if="gameVal.roomOwner">开始游戏</button>
+            <button @click="exit">离开房间</button>
+        </div>
+    </div>
+
+</div>
+
 
 </body>
 <script>
-    var cnn;
-    var username = "Player|" + Math.ceil(Math.random() * 100);
-    window.onload = function () {
-        if (window["WebSocket"]) {
-            conn = new WebSocket("ws://" + document.location.host + "/cnn");
-            conn.onclose = onClose;
-            conn.onmessage = onMsg;
-            conn.onopen = onOpen;
-        } else {
-            console.error("Your browser does not support WebSockets.");
-        }
+    /*
+     游戏状态：
+     - Offline 没有连接服务器（用户可能没有创建）
+     - Online 连接完成在大厅中
+     - InRoom 在房间中
+     - Gaming 游戏中
+     */
+    const GameStatus = {
+        "Offline": "Offline",
+        "Online": "Online",
+        "InRoom": "InRoom",
+        "Gaming": "Gaming",
+        "EndReport": "EndReport"
     };
 
-    function onClose(evt) {
-        console.warn("<< Connection close:", evt);
-    }
+    var app = new Vue({
+        el: '#app',
+        data: {
+            username: "",
+            conn: '',
+            newRoomName: '',
+            roomInterval: '',
+            roomList: [],
+            status: GameStatus.Offline,
+            gameVal: {
+                roomName: '',
+                // 是否是房间的房主
+                roomOwner: false
+            }
+        },
+        watch: {
+            // 客户端段游戏状态监听
+            status: function (newStatus, oldStatus) {
+                console.log("Status:", oldStatus, "->", newStatus);
+                if (oldStatus === newStatus) {
+                    return
+                }
+                // oldStatus: Gaming -> Online 启动拉取房间列表
+                if (newStatus === GameStatus.Online) {
+                    this.pullRoomInterval()
+                }
+                // newStatus: any -> InRoom 取消房间列表拉取
+                else if (newStatus === GameStatus.InRoom) {
+                    clearInterval(this.roomInterval)
+                }
+            }
+        },
+        methods: {
+            // 开始/重开游戏
+            restartGame: function () {
 
-    function onMsg(evt) {
-        var messages = evt.data;
-        console.log(">>", messages);
-    }
-
-    function onOpen(evt) {
-        conn.send(username);
-        console.log(">>",username, "Connected")
-    }
+            },
+            // 退出房间
+            exit: function () {
+                if (this.status === GameStatus.Offline
+                    || this.status === GameStatus.Online) {
+                    console.warn("未处于任何房间，无法退出");
+                    return;
+                }
+                // 从房间中移除
+                axios.delete('/CatchAce/player?' +
+                    'roomName=' + this.gameVal.roomName +
+                    '&userName=' + this.username).finally(() => {
+                    // 回到大厅
+                    this.status = GameStatus.Online
+                })
+            },
+            // 加入游戏
+            join: function (room) {
+                let data = new FormData();
+                data.append('username', this.username);
+                data.append('roomName', room.roomName);
+                axios.post("/CatchAce/join", data).then(res => {
+                    // 加入房间
+                    this.status = GameStatus.InRoom;
+                }).catch(error => {
+                    if (error.response) {
+                        alert(error.response.data);
+                    }
+                })
+            },
+            // 房间描述
+            roomDesp: function (room) {
+                let txt = "创建者: " + room.creator;
+                txt += "\n当前玩家数量: " + room.playerNum;
+                return txt
+            },
+            // 定期拉取房间列表
+            pullRoomInterval: function () {
+                // 调用时立刻拉取
+                this.pullRoom();
+                // 如果已经存在一个定时器，那么删除
+                if (this.roomInterval) {
+                    clearInterval(this.roomInterval)
+                }
+                // 定期拉取游戏房间列表
+                this.roomInterval = setInterval(() => {
+                    this.pullRoom();
+                }, 5000)
+            },
+            // 拉取房间列表
+            pullRoom: function () {
+                axios.get('/CatchAce')
+                    .then((response) => {
+                        this.roomList = (!response.data) ? [] : response.data;
+                    })
+                    .catch((error) => {
+                        console.log(error.response);
+                    });
+            },
+            // 创建房间
+            createRoom: function () {
+                if (!this.newRoomName) {
+                    console.log("房间名不能为空");
+                    return;
+                }
+                let data = new FormData();
+                data.append('username', this.username);
+                data.append('roomName', this.newRoomName);
+                axios.post("/CatchAce/create", data).then(res => {
+                    this.status = GameStatus.InRoom;
+                    this.gameVal.roomName = this.newRoomName;
+                    this.gameVal.roomOwner = true;
+                }).catch(error => {
+                    if (error.response) {
+                        alert(error.response.data);
+                    }
+                })
+            },
+            // 检查并连接服务器
+            checkAndConnect: function () {
+                if (!this.username) {
+                    alert("必须填写用户名");
+                    return
+                }
+                console.log(">> Set username:", this.username);
+                localStorage["username"] = this.username;
+                axios.get('/userExist?username=' + this.username).then(res => {
+                    if (res.data) {
+                        alert("用户名: " + this.username + " 已存在，换一个试试吧");
+                        return
+                    }
+                    this.connect()
+                });
+            },
+            connect: function () {
+                if (!window["WebSocket"]) {
+                    alert("您的浏览器不支持！");
+                    return
+                }
+                this.conn = new WebSocket("ws://" + document.location.host + "/cnn");
+                this.conn.onclose = this.onClose;
+                this.conn.onmessage = this.onMsg;
+                this.conn.onopen = this.onOpen;
+                this.status = GameStatus.Online;
+                // 开始定期拉取
+                this.pullRoomInterval();
+            },
+            onClose: function (evt) {
+                this.status = GameStatus.Offline;
+                console.warn("<< Connection close:", evt);
+            },
+            onMsg: function (evt) {
+                let messages = evt.data;
+                console.log(">>", messages);
+                // TODO 消息处理
+            },
+            onOpen: function (evt) {
+                this.conn.send(this.username);
+                console.log(">>", this.username, "Connected")
+            },
+        },
+        mounted: function () {
+            this.username = localStorage["username"];
+        },
+        destroyed: function () {
+            if (this.conn) {
+                this.conn.close()
+            }
+        }
+    });
 
 
 </script>

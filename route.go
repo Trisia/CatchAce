@@ -22,4 +22,14 @@ func routeConfig(r *gin.Engine) {
 	r.DELETE("/CatchAce/player", catchAceExit)
 	// 开始/重启 游戏
 	r.GET("/CatchAce/start", catchAceStart)
+	// 检查用户是否已经存在
+	r.GET("/userExist", func(c *gin.Context) {
+		username := c.Query("Username")
+		use := OnlineUses[username]
+		if use == nil {
+			c.String(http.StatusOK, "false")
+			return
+		}
+		c.String(http.StatusOK, "true")
+	})
 }

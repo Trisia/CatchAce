@@ -24,19 +24,19 @@ func (r *CatchAce) processCard(card string, p *Player) bool {
 	case "K":
 		selfDrink(r, p)
 	case "A":
-		return ace(r,p)
+		return ace(r, p)
 	}
 	return false
 }
 
 // 抽到A判断是否结束游戏
-func ace(r *CatchAce, p *Player) bool{
+func ace(r *CatchAce, p *Player) bool {
 	cnt := r.counter["A"]
-	if cnt == 4{
+	if cnt == 4 {
 		r.Broadcast(Msg{
-			username: p.username,
-			action:   "Punish",
-			data:     strconv.Itoa(r.counter["K"]),
+			Username: p.username,
+			Action:   "Punish",
+			Data:     strconv.Itoa(r.counter["K"]),
 		})
 		return true
 	}
@@ -47,9 +47,9 @@ func ace(r *CatchAce, p *Player) bool{
 func selfDrink(r *CatchAce, p *Player) {
 	// 广播喝酒信息
 	r.Broadcast(Msg{
-		username: p.username,
-		action:   "Punish",
-		data:     strconv.Itoa(r.counter["K"]),
+		Username: p.username,
+		Action:   "Punish",
+		Data:     strconv.Itoa(r.counter["K"]),
 	})
 }
 
@@ -58,13 +58,13 @@ func reqAddAke(r *CatchAce, p *Player) {
 	// 向指定的玩家发送加酒请求
 	// 等待玩家响应
 	resp, err := p.RequestTT(Msg{
-		username: p.username,
-		action:   "RequestJ",
+		Username: p.username,
+		Action:   "RequestJ",
 	}, 5*time.Second)
 	added := 1
 	if err == nil {
 		// 如果玩家没有处理没有超时，那么取得 请求加酒值。
-		num, err := strconv.Atoi(resp.data)
+		num, err := strconv.Atoi(resp.Data)
 		if err == nil {
 			added = num
 		}
@@ -72,8 +72,8 @@ func reqAddAke(r *CatchAce, p *Player) {
 	r.sake += added
 	// 广播加酒信息
 	r.Broadcast(Msg{
-		username: p.username,
-		action:   "AddSake",
-		data:     string(added),
+		Username: p.username,
+		Action:   "AddSake",
+		Data:     string(added),
 	})
 }

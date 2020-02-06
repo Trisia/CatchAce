@@ -14,12 +14,12 @@ func createCatchAce(c *gin.Context) {
 
 	user := OnlineUses[username]
 	if user == nil {
-		c.String(http.StatusBadRequest, fmt.Sprintf("用户: [%s] 不存在"))
+		c.String(http.StatusBadRequest, fmt.Sprintf("用户: [%s] 不存在或未连接", username))
 		return
 	}
 	room := Games[roomName]
 	if room != nil {
-		c.String(http.StatusBadRequest, fmt.Sprintf("房间: [%s] 已经存在，名称重复"))
+		c.String(http.StatusBadRequest, fmt.Sprintf("房间: [%s] 已经存在，名称重复", roomName))
 		return
 	}
 	// 创建新的房间
@@ -31,13 +31,14 @@ func createCatchAce(c *gin.Context) {
 
 // listCatchAce 列出所有摸A的房间
 func listCatchAce(c *gin.Context) {
-	res := make(map[string]map[string]interface{})
+	var res []interface{}
 	for roomName, game := range Games {
-		res[roomName] = map[string]interface{}{
+		res = append(res, map[string]interface{}{
+			"roomName":  roomName,
 			"creator":   game.manager.username,
 			"status":    game.status,
 			"playerNum": len(game.players),
-		}
+		})
 	}
 	c.JSON(http.StatusOK, res)
 }
@@ -45,7 +46,8 @@ func listCatchAce(c *gin.Context) {
 // joinCatchAce 加入房间
 func joinCatchAce(c *gin.Context) {
 	roomName := c.PostForm("roomName")
-	userName := c.PostForm("userName")
+	userName := c.PostForm("username")
+	fmt.Println(OnlineUses)
 	room := Games[roomName]
 	if room == nil {
 		c.String(http.StatusBadRequest, fmt.Sprintf("房间 [%s] 不存在，无法加入房间", roomName))
@@ -54,6 +56,7 @@ func joinCatchAce(c *gin.Context) {
 	user := OnlineUses[userName]
 	if user == nil {
 		c.String(http.StatusBadRequest, fmt.Sprintf("玩家 [%s] 不存在，无法加入房间", userName))
+		return
 	}
 	// 加入房间
 	room.Join(user.Player())
@@ -64,15 +67,16 @@ func joinCatchAce(c *gin.Context) {
 func catchAceExit(c *gin.Context) {
 	roomName := c.Query("roomName")
 	userName := c.Query("userName")
-
+	log.Printf(">> 玩家: [%s] 退出房间 [%s]", userName, roomName)
 	room := Games[roomName]
 	if room.manager.username == userName {
-		delete(Games, roomName)
+		// 删除房主所创建的所有房间
+		OnlineUses[userName].DeleteRoom()
 	} else {
+		// 玩家退出房间
 		room.Exit(userName)
 	}
 	c.String(http.StatusOK, "")
-
 }
 
 // catchAceStart 开始/重启 游戏
