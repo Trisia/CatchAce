@@ -66,7 +66,7 @@ func joinCatchAce(c *gin.Context) {
 func catchAceExit(c *gin.Context) {
 	roomName := c.Query("roomName")
 	userName := c.Query("userName")
-	log.Printf(">> 玩家: [%s] 退出房间 [%s]", userName, roomName)
+	log.Printf("玩家: [%s] 退出房间 [%s]", userName, roomName)
 	room := Games[roomName]
 	if room.manager.username == userName {
 		// 删除房主所创建的所有房间

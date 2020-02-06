@@ -23,7 +23,7 @@ func report() {
 		ticker := time.NewTicker(10 * time.Second).C
 		for {
 			<-ticker
-			log.Printf(">> 当前在线人数: %d", len(OnlineUses))
+			log.Printf("当前在线人数: %d", len(OnlineUses))
 		}
 	}()
 }
