@@ -1,7 +1,6 @@
 package main
 
 import (
-	"strconv"
 	"strings"
 	"time"
 )
@@ -36,7 +35,7 @@ func ace(r *CatchAce, p *Player) bool {
 		r.Broadcast(Msg{
 			Username: p.username,
 			Action:   "Punish",
-			Data:     strconv.Itoa(r.counter["K"]),
+			Data:     r.counter["K"],
 		})
 		return true
 	}
@@ -49,7 +48,7 @@ func selfDrink(r *CatchAce, p *Player) {
 	r.Broadcast(Msg{
 		Username: p.username,
 		Action:   "Punish",
-		Data:     strconv.Itoa(r.counter["K"]),
+		Data:     r.counter["K"],
 	})
 }
 
@@ -64,8 +63,8 @@ func reqAddAke(r *CatchAce, p *Player) {
 	added := 1
 	if err == nil {
 		// 如果玩家没有处理没有超时，那么取得 请求加酒值。
-		num, err := strconv.Atoi(resp.Data)
-		if err == nil {
+		num, ok := resp.Data.(int)
+		if ok {
 			added = num
 		}
 	}
@@ -74,6 +73,6 @@ func reqAddAke(r *CatchAce, p *Player) {
 	r.Broadcast(Msg{
 		Username: p.username,
 		Action:   "AddSake",
-		Data:     string(added),
+		Data:     added,
 	})
 }

@@ -38,7 +38,7 @@ func (p *Player) Send(msg Msg) {
 	}()
 }
 
-func (p *Player) SendMsg(action, data string) {
+func (p *Player) SendMsg(action string, data interface{}) {
 	p.Send(Msg{Username: p.username, Action: action, Data: data})
 }
 

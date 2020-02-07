@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand"
 	"regexp"
-	"strconv"
 	"time"
 )
 
@@ -19,13 +18,28 @@ type CatchAce struct {
 	currentPlayerIndex int            // 但前玩家索引
 	counter            map[string]int // 扑克计数器
 	sake               int            // 加酒的数量 (日语　さけ)
-	status             string         // 游戏状态
+	status             string         // 游戏状态: wait - 等待、gaming - 游戏中、end - 结束、close - 关闭
 }
 
 type Msg struct {
 	Username string
-	Action   string // 动作名称
-	Data     string // 动作数据
+	Action   string      // 动作名称
+	Data     interface{} // 动作数据
+}
+
+// 玩家临时数据
+type playerDto struct {
+	username string
+	cards    []string
+}
+
+// 当前的游戏信息
+type gameInfoDto struct {
+	Players            []playerDto // 游戏中玩家信息
+	RemainCard         []string    // 剩余卡牌
+	Sake               int         // 已经增加的酒信息
+	CurrentPlayerIndex int         // 但前正在操作玩家
+	Direction          int         // 轮转方向 1 表示顺序，-1 表示逆序
 }
 
 // 创建一个新的游戏房间
@@ -36,7 +50,45 @@ func NewCatchAce(name string, manager *Player) *CatchAce {
 	}
 	room.players = append(room.players, manager)
 	room.Init()
+	// 广播游戏信息
+	room.GameInfoBroadcast()
 	return &room
+}
+
+// getGameInfo 获取但前游戏状态
+func (r *CatchAce) getGameInfo() gameInfoDto {
+	var players []playerDto
+	for _, p := range r.players {
+		players = append(players, playerDto{
+			username: p.username,
+			cards:    p.cards,
+		})
+	}
+	return gameInfoDto{
+		Players:            players,
+		RemainCard:         r.cards,
+		Sake:               r.sake,
+		CurrentPlayerIndex: r.currentPlayerIndex,
+		Direction:          r.incBase,
+	}
+}
+
+// 广播游戏信息
+func (r *CatchAce) GameInfoBroadcast() {
+	tick := time.Tick(500 * time.Millisecond)
+	go func() {
+		for r.status != "close" {
+			<-tick
+			r.Broadcast(Msg{
+				Action: "GameInfo",
+				Data:   r.getGameInfo(),
+			})
+		}
+	}()
+}
+
+func (r *CatchAce) Close() {
+	r.status = "close"
 }
 
 // Join 增加玩家数量
@@ -67,6 +119,10 @@ func (r *CatchAce) Init() {
 	r.counter = make(map[string]int)
 	r.sake = 0
 	r.status = "wait"
+	for _, p := range r.players {
+		// 清空玩家所有手牌
+		p.cards = []string{}
+	}
 }
 
 // 重新洗牌
@@ -124,11 +180,10 @@ func (r *CatchAce) Run() {
 			if r.sake == 0 {
 				r.sake = 1
 			}
-
 			r.Broadcast(Msg{
 				Username: nextPlayer.username,
 				Action:   "EndOfGame",
-				Data:     strconv.Itoa(r.sake),
+				Data:     r.sake,
 			})
 			r.status = "End"
 			break
@@ -139,9 +194,10 @@ func (r *CatchAce) Run() {
 // 玩家抽卡
 // 返回抽到的卡
 func (r *CatchAce) drawCard(p *Player) string {
-	// 取出牌面的第一个元素
-	newCard := r.cards[0]
-	r.cards = r.cards[1:]
+	// 从剩余扑克中随机取出一个
+	index := rand.Intn(len(r.cards))
+	newCard := r.cards[index]
+	r.cards = append(r.cards[0:index], r.cards[index+1:]...)
 	p.cards = append(p.cards, newCard)
 	return newCard
 }
@@ -181,11 +237,8 @@ func (r *CatchAce) skipDrawCard(p *Player) bool {
 		Username: p.username,
 		Action:   "ReqUseQ",
 	})
-	parseBool, err := strconv.ParseBool(resp.Data)
-	if err != nil {
-		panic(err)
-	}
-	if parseBool {
+	parseBool, ok := resp.Data.(bool)
+	if ok && parseBool {
 		// 广播某人使用Q
 		r.Broadcast(Msg{
 			Username: p.username,

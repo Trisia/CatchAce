@@ -46,6 +46,9 @@
             <button v-if="gameVal.roomOwner && status != 'Gaming'" @click="restartGame">开始游戏</button>
             <button @click="exit">离开房间</button>
         </div>
+        <div>
+            <p>扑克: <span>{{}}/20</span></p>
+        </div>
     </div>
 
 </div>
@@ -82,6 +85,7 @@
                 roomName: '',
                 // 是否是房间的房主
                 roomOwner: false
+
             }
         },
         watch: {

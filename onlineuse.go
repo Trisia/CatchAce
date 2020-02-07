@@ -104,6 +104,8 @@ func (c *OnlineUse) DeleteRoom() {
 		// 找到该用户创建的所有房间
 		if room.manager.username == c.username {
 			log.Printf("因为房主: [%s]退出，删除房间: [%s]", c.username, roomName)
+			// 关闭房间
+			room.Close()
 			delete(Games, roomName)
 			// 通知其他玩家房主下线，房间解散
 			for _, player := range room.players {
