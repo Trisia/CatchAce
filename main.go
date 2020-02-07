@@ -13,6 +13,7 @@ var OnlineUses = make(map[string]*OnlineUse)
 var Games = make(map[string]*CatchAce)
 
 func main() {
+	gin.SetMode(gin.DebugMode)
 	r := gin.Default()
 	routeConfig(r)
 	r.Run(":80")

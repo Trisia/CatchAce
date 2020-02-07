@@ -29,8 +29,8 @@ type Msg struct {
 
 // 玩家临时数据
 type playerDto struct {
-	username string
-	cards    []string
+	Username string
+	Cards    []string
 }
 
 // 当前的游戏信息
@@ -60,8 +60,8 @@ func (r *CatchAce) getGameInfo() gameInfoDto {
 	var players []playerDto
 	for _, p := range r.players {
 		players = append(players, playerDto{
-			username: p.username,
-			cards:    p.cards,
+			Username: p.username,
+			Cards:    p.cards,
 		})
 	}
 	return gameInfoDto{

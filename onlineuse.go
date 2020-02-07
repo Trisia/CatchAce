@@ -88,7 +88,7 @@ func (c *OnlineUse) writePump() {
 				log.Println("write:", err)
 				return
 			}
-			log.Printf("<< [%s]: %s", c.username, message)
+			//log.Printf("<< [%s]: %s", c.username, message)
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
