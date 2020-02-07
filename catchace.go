@@ -216,36 +216,39 @@ func (r *CatchAce) choosePlayer() *Player {
 // 询问是否使用跳过卡
 // return true 表示使用 false - 没有或不使用
 func (r *CatchAce) skipDrawCard(p *Player) bool {
-	useCard := ""
-	if p.cards != nil {
-		for i, card := range p.cards {
-			// 从玩家已经拥有的卡组中寻找未使用的的Q
-			if QPattern.MatchString(card) && len(card) < 4 {
-				useCard = p.cards[i]
-				// 标记已经被使用
-				p.cards[i] = p.cards[i] + ",used"
-				break
-			}
+	index := -1
+	for i, card := range p.cards {
+		// 从玩家已经拥有的卡组中寻找未使用的的Q
+		if QPattern.MatchString(card) && len(card) < 4 {
+			index = i
+			break
 		}
 	}
-	if useCard == "" {
+	if index == -1 {
 		// 不存在Q
 		return false
 	}
 	// 询问是否使用Q
-	resp := p.Request(Msg{
+	resp, err := p.RequestTT(Msg{
 		Username: p.username,
 		Action:   "ReqUseQ",
-	})
-	parseBool, ok := resp.Data.(bool)
-	if ok && parseBool {
+	}, 5*time.Second)
+	if err != nil {
+		// 等待超时默认不使用
+		return false
+	}
+	use, ok := resp.Data.(bool)
+	if ok && use {
+		// 表示卡已经使用
+		p.cards[index] = p.cards[index] + ",used"
 		// 广播某人使用Q
 		r.Broadcast(Msg{
 			Username: p.username,
-			Data:     "UsedQ",
+			Action:   "UsedQ",
+			Data:     p.cards[index],
 		})
 	}
-	return parseBool
+	return use
 }
 
 // 广播消息
