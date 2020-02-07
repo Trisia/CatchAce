@@ -45,7 +45,7 @@ func (p *Player) SendMsg(action string, data interface{}) {
 // 等待收到消息
 func (p *Player) WaitMsg() (resp Msg) {
 	reply := <-p.in
-	err := json.Unmarshal(reply, resp)
+	err := json.Unmarshal(reply, &resp)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +69,7 @@ func (p *Player) RequestTT(msg Msg, duration time.Duration) (resp Msg, err error
 	}()
 	select {
 	case reply := <-p.in:
-		err := json.Unmarshal(reply, resp)
+		err := json.Unmarshal(reply, &resp)
 		if err != nil {
 			panic(err)
 		}

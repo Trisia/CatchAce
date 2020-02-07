@@ -186,6 +186,9 @@ var app = new Vue({
         // 发送消息
         send: function(msg){
             if (this.conn) {
+                if (msg.Username === undefined) {
+                    msg.Username = this.username;
+                }
                 this.conn.send(JSON.stringify(msg));
             }
         },
@@ -210,7 +213,8 @@ var app = new Vue({
                     this.status = GameStatus.Gaming;
                     break;
                 // 抽卡指令
-                case Action.DoDraw:
+                case Action.Drawing:
+                    console.log(">>", msg);
                     this.draw(msg.Username);
                     break;
                 default:
