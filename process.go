@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"strings"
 	"time"
 )
@@ -59,7 +60,7 @@ func reqAddAke(r *CatchAce, p *Player) {
 	resp, err := p.RequestTT(Msg{
 		Username: p.username,
 		Action:   "RequestJ",
-	}, 5*time.Second)
+	}, 10*time.Second)
 	added := 1
 	if err == nil {
 		// 如果玩家没有处理没有超时，那么取得 请求加酒值。
@@ -67,6 +68,8 @@ func reqAddAke(r *CatchAce, p *Player) {
 		if ok {
 			added = num
 		}
+	} else {
+		log.Printf("玩家: [%s] 加酒超时...")
 	}
 	r.sake += added
 	// 广播加酒信息

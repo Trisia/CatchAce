@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"regexp"
 	"time"
@@ -232,8 +233,9 @@ func (r *CatchAce) skipDrawCard(p *Player) bool {
 	resp, err := p.RequestTT(Msg{
 		Username: p.username,
 		Action:   "ReqUseQ",
-	}, 5*time.Second)
+	}, 10*time.Second)
 	if err != nil {
+		log.Printf("玩家:%s 是否使用Q超时...", p.username)
 		// 等待超时默认不使用
 		return false
 	}
