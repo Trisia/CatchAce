@@ -85,8 +85,8 @@
                             v-for="p in players">{{p.Username}}</button>
                 </div>
                 <md-button v-if="owner"
-                        class="button button-calm button-block"
-                        @click.native="restartGame">
+                           class="button button-calm button-block"
+                           @click.native="restartGame">
                     开始游戏
                 </md-button>
                 <p v-else>等待房主开始游戏...</p>
@@ -99,11 +99,31 @@
                     </div>
                     <div class="button button-calm button-outline" style="width: 48%;float: right">已加酒: {{ sake }}</div>
                 </div>
+                <!-- 游戏信息窗口 -->
+                <div></div>
+                <!-- 手牌窗口 -->
+                <div class="ft">
+                    <ul>
+                        <li>1</li>
+                        <li>1</li>
+                        <li>1</li>
+                        <li>1</li>
+                        <li>1</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 </script>
-
+<style>
+    .ft {
+        padding: 10px 0 0 0;
+        width: 100%;
+        position: fixed;
+        left: 0;
+        bottom: 0;
+    }
+</style>
 <script>
 
     /*
