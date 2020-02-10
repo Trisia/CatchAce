@@ -118,7 +118,7 @@ func (r *CatchAce) Init() {
 	r.incBase = 1
 	r.currentPlayerIndex = -1
 	r.counter = make(map[string]int)
-	r.sake = 0
+	r.sake = 1
 	r.status = "wait"
 	for _, p := range r.players {
 		// 清空玩家所有手牌

@@ -74,8 +74,33 @@
 </script>
 
 <script type="text/x-template" id="gaming">
-    <div class="page has-navbar" v-nav="{ title: roomName, showBackButton: true, onBackButtonClick: exit }">
-        <h2>No thing here.</h2>
+    <div class="page has-navbar" v-nav="{ title: '游戏房间: ' + roomName, showBackButton: true, onBackButtonClick: exit }">、
+        <div class="page-content text-center">
+            <div v-if="status == 'InRoom'">
+                <div style="text-align: left;margin-top: 10px; padding-bottom: 10px;border-bottom: #888888 1px solid">
+                    <div class="item item-divider">
+                        玩家列表
+                    </div>
+                    <button style="margin-left: 13px" class="button button-balanced"
+                            v-for="p in players">{{p.Username}}</button>
+                </div>
+                <md-button v-if="owner"
+                        class="button button-calm button-block"
+                        @click.native="restartGame">
+                    开始游戏
+                </md-button>
+                <p v-else>等待房主开始游戏...</p>
+            </div>
+            <div v-if="status == 'Gaming'">
+                <!-- 提示窗 -->
+                <div style="margin: 10px">
+                    <div class="button button-calm button-outline" style="width: 45%;float: left">
+                        剩余卡牌:{{ remain }}/20
+                    </div>
+                    <div class="button button-calm button-outline" style="width: 48%;float: right">已加酒: {{ sake }}</div>
+                </div>
+            </div>
+        </div>
     </div>
 </script>
 
@@ -99,6 +124,12 @@
         OwnerExit: "OwnerExit", // - 房主退出了游戏
         GameInfo: "GameInfo",   // - 游戏状态广播
     };
+
+    const GameStatus = {
+        InRoom: 'InRoom',
+        Gaming: 'Gaming'
+    };
+
     var state = {
         username: "",
         conn: ''
@@ -117,6 +148,7 @@
             return state.username;
         }
     };
+
     const Index = {
         template: '#index',
         data() {
@@ -161,7 +193,6 @@
             console.log(">> WebSocket支持: OK")
         }
     };
-
     const GameCenter = {
         template: '#gameCenter',
         data() {
@@ -189,7 +220,7 @@
                 console.log(">> Cliven Join:", roomName);
                 let data = new FormData();
                 data.append('username', this.username);
-                data.append('roomName', room.roomName);
+                data.append('roomName', roomName);
                 axios.post("/CatchAce/join", data).then(res => {
                     this.$router.push({
                         path: "/gaming", query: {
@@ -199,7 +230,7 @@
                     });
                 }).catch(error => {
                     if (error.response) {
-                        alert(error.response.data);
+                        $dialog.alert({content: error.response.data});
                     }
                 })
             },
@@ -261,21 +292,35 @@
             }
         }
     };
-
     const Gaming = {
         template: '#gaming',
         data() {
             return {
                 roomName: this.$route.query.roomName,
-                owner: this.$route.query.owner,
+                owner: this.$route.query.owner, // 是否是房主
+                players: [],            // 房间中玩家
+                sake: 1,                // 加酒信息
+                currentPlayerIndex: 0,  // 但前抽卡玩家
+                direction: 1,           // 抽牌方向
+                remain: 20,             // 剩余卡牌数量
+                hand: [],               // 手牌
+                status: GameStatus.InRoom,       // 在房间中
             }
         },
         computed: {
             username: function () {
                 return this.$store.getters.getUsername
+            },
+            conn: function () {
+                return this.$store.state.conn;
             }
         },
         methods: {
+            // 开始/重开游戏
+            restartGame: function () {
+                axios.get('/CatchAce/start?roomName=' + this.roomName);
+            },
+
             // 退出房间
             exit: function () {
                 console.log(">>", this.username, "从房间", this.roomName, "退出");
@@ -286,11 +331,81 @@
                     this.$router.back('/gamecenter')
                 });
             },
+            // 发送消息到服务端
+            send(msg) {
+                if (msg.Username === undefined) {
+                    msg.Username = this.username;
+                }
+                this.conn.send(JSON.stringify(msg));
+            },
+            onMsg: function (evt) {
+                // 序列化消息
+                let msg = JSON.parse(evt.data);
+                this.messageProcess(msg)
+            },
+            // 消息处理器
+            messageProcess: function (msg) {
+                switch (msg.Action) {
+                    case Action.GameInfo:
+                        // 同步游戏状态
+                        this.renewGameInfo(msg.Data);
+                        break;
+                    case Action.StartGame:
+                        // 开始游戏
+                        this.status = GameStatus.Gaming;
+                        break;
+                    // // 抽卡指令
+                    // case Action.Drawing:
+                    //     console.log(">>", msg);
+                    //     this.draw(msg.Username);
+                    //     break;
+                    case Action.OwnerExit:
+                        // 房主退出，返回大厅
+                        console.log(">>", msg);
+                        this.$router.back('/gamecenter');
+                        break;
+                    default:
+                        console.log(">>", msg);
+                }
+            },
+
+            // // 抽卡或显示玩家正在抽卡
+            // draw: function (username) {
+            //     if (username === this.username) {
+            //         // 自己抽卡
+            //         alert("点击确定抽卡");
+            //         this.send({
+            //             Action: Action.DoDraw
+            //         })
+            //     } else {
+            //         // TODO 显示某玩家正在抽卡
+            //         console.log(">> 玩家:", this.username, "正在抽卡...")
+            //     }
+            // },
+            // 更新游戏信息
+            renewGameInfo: function (data) {
+                this.sake = data.Sake;
+                this.currentPlayerIndex = data.CurrentPlayerIndex;
+                this.direction = data.Direction;
+                this.remain = data.RemainCard.length;
+                this.$set(this, 'players', data.Players);
+                // 设置玩家自己的手牌
+                for (let p in data.Players) {
+                    if (p.Username === this.username) {
+                        this.$set(this, "hand", data.Cards);
+                        break;
+                    }
+                }
+            },
         },
         mounted() {
-            if(!this.$store.state.conn) {
+            if (!this.conn) {
                 this.$router.back("/");
             }
+            this.conn.onmessage = this.onMsg;
+        },
+        destroyed() {
+            this.conn.onmessage = null;
         }
     };
 
