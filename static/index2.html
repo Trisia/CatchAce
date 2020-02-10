@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Catch Ace</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://unpkg.com/vonic@2.0.0-beta.11/dist/vonic.min.css">
+    <script src="https://unpkg.com/axios@0.15.3/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/vue@2.1.10/dist/vue.min.js"></script>
+    <script src="https://unpkg.com/vue-router@2.2.1/dist/vue-router.min.js"></script>
+    <script src="https://unpkg.com/vuex@2.2.1/dist/vuex.min.js"></script>
+    <script src="https://unpkg.com/vonic@2.0.0-beta.11/dist/vonic.min.js"></script>
+
+</head>
+<body>
+
+<von-app></von-app>
+</body>
+
+<script type="text/x-template" id="index">
+    <div class="page has-navbar" v-nav="{ title: '摸A' }">
+        <div class="page-content text-center">
+            <von-input
+                    type="text"
+                    v-model="username"
+                    placeholder="请输入玩家名"
+                    label="玩家名">
+            </von-input>
+
+            <md-button class="button button-positive button-block"
+                       @click.native="checkConn">
+                连接服务器
+            </md-button>
+
+        </div>
+    </div>
+</script>
+
+<script type="text/x-template" id="gameCenter">
+    <div class="page has-navbar" v-nav="{ title: '游戏大厅', showBackButton: true, onBackButtonClick: logout }">
+        <div class="page-content text-center">
+            <div class="padding">玩家: {{ this.$store.state.username }}
+                <von-input
+                        type="text"
+                        v-model="newRoomName"
+                        placeholder="请输入要创建的房间名称"
+                        label="房间名">
+                </von-input>
+                <md-button class="button button-positive button-block"
+                           @click.native="createRoom">
+                    <i class="icon ion-home"></i> 创建房间
+                </md-button>
+            </div>
+            <div style="padding-top: 10px">
+                <p>房间列表:</p>
+                <list>
+                    <div v-for="r in roomList">
+                        <hl-item class="item-icon-right"
+                                 style="text-align: left"
+                                 @click.native="join(r.roomName)">
+                            {{r.roomName}}
+                            <div class="item-note">
+                                {{r.status}}
+                            </div>
+                            <span class="icon ion-ios-arrow-right"></span>
+                        </hl-item>
+                    </div>
+                    <div style="height: 100px"></div>
+                </list>
+            </div>
+        </div>
+    </div>
+</script>
+
+<script type="text/x-template" id="gaming">
+    <div class="page has-navbar" v-nav="{ title: roomName, showBackButton: true, onBackButtonClick: exit }">
+        <h2>No thing here.</h2>
+    </div>
+</script>
+
+<script>
+
+    /*
+        游戏消息类型
+     */
+    const Action = {
+        ReqUseQ: "ReqUseQ",     // - 询问是否使用Q跳过抽卡
+        RespUseQ: "RespUseQ",   // - 响应已经是否使用Q跳过抽卡
+        UsedQ: "UsedQ",         // - 广播某玩家已经使用了Q跳过抽卡
+        Drawing: "Drawing",     // - 玩家正在抽卡
+        DoDraw: "DoDraw",       // - 玩家触发抽卡（客户端发起）
+        Notice: "Notice",       // - 通知某玩家抽到卡
+        RequestJ: "RequestJ",   // - 请求加酒
+        AddSake: "AddSake",     // - 公告加酒数量
+        Punish: "Punish",       // - 罚酒
+        StartGame: "StartGame", // - 开始游戏
+        EndGame: "EndGame",     // - 游戏结束
+        OwnerExit: "OwnerExit", // - 房主退出了游戏
+        GameInfo: "GameInfo",   // - 游戏状态广播
+    };
+    var state = {
+        username: "",
+        conn: ''
+    };
+    var mutations = {
+        setUsername: function (state, username) {
+            state.username = username;
+            sessionStorage['username'] = username;
+        }
+    };
+    var getters = {
+        getUsername: function (state) {
+            if (sessionStorage['username']) {
+                state.username = sessionStorage['username'];
+            }
+            return state.username;
+        }
+    };
+    const Index = {
+        template: '#index',
+        data() {
+            return {}
+        },
+        methods: {
+            checkConn: function () {
+                if (!this.username) {
+                    $toast.show('玩家名不能为空');
+                    return
+                }
+                console.log(">> Set Username:", this.username);
+                axios.get('/userExist?username=' + this.username).then(res => {
+                    if (res.data) {
+                        $toast.show("用户名: " + this.username + " 已存在，换一个试试吧");
+                        return
+                    }
+                    this.$store.state.conn = new WebSocket("ws://" + document.location.host + "/cnn");
+                    this.$store.state.conn.onopen = () => {
+                        // 连接后的一条消息发送用户名
+                        this.$store.state.conn.send(this.username);
+                    };
+                    this.$router.push('/gamecenter');
+                });
+            },
+        },
+        computed: {
+            username: {
+                get() {
+                    return this.$store.getters.getUsername
+                },
+                set(username) {
+                    this.$store.commit('setUsername', username)
+                }
+            }
+        },
+        mounted: function () {
+            if (!window["WebSocket"]) {
+                $toast.show("您的浏览器不支持！");
+                return
+            }
+            console.log(">> WebSocket支持: OK")
+        }
+    };
+
+    const GameCenter = {
+        template: '#gameCenter',
+        data() {
+            return {
+                roomList: [],
+                newRoomName: '',
+                roomInterval: -1
+            }
+        },
+        computed: {
+            username: function () {
+                return this.$store.getters.getUsername
+            }
+        },
+
+        methods: {
+            logout: function () {
+                console.log(">> 玩家:", this.username, "退出登录");
+                // 断开连接
+                this.$store.state.conn.close();
+                this.$router.back('/')
+            },
+            // 加入游戏
+            join: function (roomName) {
+                console.log(">> Cliven Join:", roomName);
+                let data = new FormData();
+                data.append('username', this.username);
+                data.append('roomName', room.roomName);
+                axios.post("/CatchAce/join", data).then(res => {
+                    this.$router.push({
+                        path: "/gaming", query: {
+                            owner: false,
+                            roomName: roomName
+                        }
+                    });
+                }).catch(error => {
+                    if (error.response) {
+                        alert(error.response.data);
+                    }
+                })
+            },
+            // 创建房间
+            createRoom: function () {
+                if (!this.newRoomName) {
+                    $dialog.alert({content: '房间名不能为空'});
+                    return;
+                }
+                console.log(">> Create Room:", this.newRoomName);
+                let data = new FormData();
+                data.append('username', this.username);
+                data.append('roomName', this.newRoomName);
+                axios.post("/CatchAce/create", data).then(res => {
+                    this.$router.push({
+                        path: "/gaming", query: {
+                            owner: true,
+                            roomName: this.newRoomName
+                        }
+                    });
+                }).catch(error => {
+                    if (error.response) {
+                        $dialog.alert({content: error.response.data});
+                    }
+                })
+            },
+            // 定期拉取房间列表
+            pullRoomInterval: function () {
+                // 调用时立刻拉取
+                this.pullRoom();
+                // 定期拉取游戏房间列表
+                this.roomInterval = setInterval(() => {
+                    this.pullRoom();
+                }, 1000)
+            },
+            // 拉取房间列表
+            pullRoom: function () {
+                axios.get('/CatchAce')
+                    .then((response) => {
+                        this.roomList = (!response.data) ? [] : response.data;
+                    })
+                    .catch((error) => {
+                        console.log(error.response);
+                    });
+            },
+        },
+        mounted() {
+            if (!this.$store.state.conn) {
+                // 没连接返还首页
+                this.$router.back("/");
+            }
+            // 定期拉取房间列表
+            this.pullRoomInterval();
+        },
+        destroyed() {
+            if (this.roomInterval !== -1) {
+                // 清除定时器
+                clearInterval(this.roomInterval);
+            }
+        }
+    };
+
+    const Gaming = {
+        template: '#gaming',
+        data() {
+            return {
+                roomName: this.$route.query.roomName,
+                owner: this.$route.query.owner,
+            }
+        },
+        computed: {
+            username: function () {
+                return this.$store.getters.getUsername
+            }
+        },
+        methods: {
+            // 退出房间
+            exit: function () {
+                console.log(">>", this.username, "从房间", this.roomName, "退出");
+                // 从房间中移除
+                axios.delete('/CatchAce/player?' +
+                    'roomName=' + this.roomName +
+                    '&userName=' + this.username).finally(() => {
+                    this.$router.back('/gamecenter')
+                });
+            },
+        },
+        mounted() {
+            if(!this.$store.state.conn) {
+                this.$router.back("/");
+            }
+        }
+    };
+
+    const routes = [
+        {path: '/', component: Index},
+        {path: '/gamecenter', component: GameCenter},
+        {path: '/gaming', component: Gaming},
+    ];
+
+    // Store
+    var store = new Vuex.Store({
+        state: state,
+        getters: getters,
+        mutations: mutations
+    });
+    // Start up
+    Vue.use(Vonic.app, {
+        routes: routes,
+        store: store
+    })
+</script>
+</html>

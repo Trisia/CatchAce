@@ -189,6 +189,7 @@ func (r *CatchAce) Run() {
 			r.status = "End"
 			break
 		}
+		time.Sleep(3 * time.Second)
 	}
 }
 

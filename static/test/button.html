@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 定制版 ionic 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/vonic@2.0.0-beta.11/dist/vonic.min.css">
+
+    <!-- 依赖库 axios/vue/vue-router -->
+    <script src="https://unpkg.com/axios@0.15.3/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/vue@2.1.10/dist/vue.min.js"></script>
+    <script src="https://unpkg.com/vue-router@2.2.1/dist/vue-router.min.js"></script>
+
+    <!-- vonic 核心文件 -->
+    <script src="https://unpkg.com/vonic@2.0.0-beta.11/dist/vonic.min.js"></script>
+</head>
+<body>
+<von-app></von-app>
+<style>
+    h2 {
+        font-family: Candara, Calibri, Segoe, Segoe UI, Optima, Arial, sans-serif;
+        color: #888;
+    }
+
+    .page.has-navbar .page-content {
+        padding-top: 100px;
+    }
+</style>
+<script type="text/x-template" id="index">
+    <div class="page has-navbar" v-nav="{title: '弹层'}">
+        <div class="page-content padding-top">
+            <div class="item item-icon-right thin-border" @click="showPopup()">
+                Show Popup
+                <i class="icon ion-ios-arrow-right"></i>
+            </div>
+        </div>
+    </div>
+</script>
+<script>
+    const Index = {
+        template: '#index',
+        methods: {
+            showPopup() {
+                let options = {
+                    effect: 'scale',
+                    title: '标题文字',
+                    buttons: [
+                        {text: '确定'},
+                        {text: '取消'},
+                    ]
+                };
+
+                let popup = $popup.fromTemplate('<p style="margin-bottom: 0; text-align: center;">{{msg}}</p>', options);
+
+                popup.show().then((buttonIndex) => {
+                    console.log(buttonIndex)
+                })
+            }
+        }
+    };
+
+    const routes = [
+        {path: '/', component: Index},
+    ];
+
+    Vue.use(Vonic.app, {
+        routes: routes
+    })
+
+</script>
+</body>
+</html>
