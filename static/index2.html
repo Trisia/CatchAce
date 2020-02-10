@@ -11,11 +11,24 @@
     <script src="https://unpkg.com/vue-router@2.2.1/dist/vue-router.min.js"></script>
     <script src="https://unpkg.com/vuex@2.2.1/dist/vuex.min.js"></script>
     <script src="https://unpkg.com/vonic@2.0.0-beta.11/dist/vonic.min.js"></script>
+    <style>
+        .poke {
+            width: 50px;
+            height: 70px;
+        }
 
+        .poke-before {
+            margin-left: -35px;
+            width: 50px;
+            height: 70px;
+        }
+    </style>
 </head>
 <body>
 
 <von-app></von-app>
+
+
 </body>
 
 <script type="text/x-template" id="index">
@@ -100,25 +113,27 @@
                     <div class="button button-calm button-outline" style="width: 48%;float: right">已加酒: {{ sake }}</div>
                 </div>
                 <!-- 游戏信息窗口 -->
-                <div></div>
-                <!-- 手牌窗口 -->
-                <div class="ft">
-                    <ul>
-                        <li>1</li>
-                        <li>1</li>
-                        <li>1</li>
-                        <li>1</li>
-                        <li>1</li>
-                    </ul>
-                </div>
+                <scroll style="height: 68%;margin-top: 80px;text-align: left">
+                    <div class="item" v-for="p in players">
+                        <h2 style="margin-bottom: 7px">{{p.Username}}</h2>
+                        <div style="height: 70px">
+                            <img v-for="(c,index) in p.Cards"
+                                 :src="imgLoc(c)"
+                                 :class="[index=='0'?'.poke':'poke-before']">
+                        </div>
+                    </div>
+                </scroll>
+
             </div>
         </div>
     </div>
 </script>
 <style>
     .ft {
-        padding: 10px 0 0 0;
+        border-top: black 1px solid;
+        z-index: 999;
         width: 100%;
+        height: 15%;
         position: fixed;
         left: 0;
         bottom: 0;
@@ -336,6 +351,12 @@
             }
         },
         methods: {
+            // 获取卡牌图片
+            imgLoc: function (card) {
+                let c = card.split(",");
+                console.log(">> ", "resource/" + c[0] + c[1] + ".png");
+                return "resource/" + c[0] + c[1] + ".png";
+            },
             // 开始/重开游戏
             restartGame: function () {
                 axios.get('/CatchAce/start?roomName=' + this.roomName);
