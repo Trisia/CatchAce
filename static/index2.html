@@ -87,8 +87,8 @@
 </script>
 
 <script type="text/x-template" id="gaming">
-    <div class="page has-navbar" v-nav="{ title: '游戏房间: ' + roomName, showBackButton: true, onBackButtonClick: exit }">、
-        <div class="page-content text-center">
+    <div class="page has-navbar" v-nav="{ title: '游戏房间: ' + roomName, showBackButton: true, onBackButtonClick: exit }">
+        <div class="page-content">
             <div v-if="status == 'InRoom'">
                 <div style="text-align: left;margin-top: 10px; padding-bottom: 10px;border-bottom: #888888 1px solid">
                     <div class="item item-divider">
@@ -104,39 +104,46 @@
                 </md-button>
                 <p v-else>等待房主开始游戏...</p>
             </div>
-            <div v-if="status == 'Gaming'">
+            <div v-else>
                 <!-- 提示窗 -->
-                <div style="margin: 10px">
+                <div class="item">
                     <div class="button button-calm button-outline" style="width: 45%;float: left">
                         剩余卡牌:{{ remain }}/20
                     </div>
-                    <div class="button button-calm button-outline" style="width: 48%;float: right">已加酒: {{ sake }}</div>
+                    <div class="button button-calm button-outline" style="width: 48%;float: right">
+                        已加酒: {{ sake }}</div>
                 </div>
                 <!-- 游戏信息窗口 -->
-                <scroll style="height: 68%;margin-top: 80px;text-align: left">
-                    <div class="item" v-for="p in players">
-                        <h2 style="margin-bottom: 7px">{{p.Username}}</h2>
-                        <div style="height: 70px">
-                            <img v-for="(c,index) in p.Cards"
-                                 :src="imgLoc(c)"
-                                 :class="[index=='0'?'.poke':'poke-before']">
-                        </div>
+                <div class="item" v-for="p in players">
+                    <h4 style="margin-bottom: 7px">{{p.Username}} <badge style="background: lightslategray" v-if="p.Username == username" num="我"></badge></h4>
+                    <div>
+                        <img v-for="(c,index) in p.Cards"
+                             :src="imgLoc(c)"
+                             :class="[index=='0'? 'poke':'poke-before']">
                     </div>
-                </scroll>
-
+                </div>
             </div>
+
         </div>
-    </div>
 </script>
 <style>
     .ft {
         border-top: black 1px solid;
         z-index: 999;
         width: 100%;
-        height: 15%;
+        height: 18%;
         position: fixed;
         left: 0;
         bottom: 0;
+    }
+
+    .player {
+        background-color: #fff;
+        border: 1px solid #ddd;
+        overflow: hidden;
+        display: block;
+        margin: -1px;
+        padding: 5px;
     }
 </style>
 <script>
@@ -354,7 +361,6 @@
             // 获取卡牌图片
             imgLoc: function (card) {
                 let c = card.split(",");
-                console.log(">> ", "resource/" + c[0] + c[1] + ".png");
                 return "resource/" + c[0] + c[1] + ".png";
             },
             // 开始/重开游戏
@@ -395,34 +401,42 @@
                         // 开始游戏
                         this.status = GameStatus.Gaming;
                         break;
-                    // // 抽卡指令
-                    // case Action.Drawing:
-                    //     console.log(">>", msg);
-                    //     this.draw(msg.Username);
-                    //     break;
+                    // 抽卡指令
+                    case Action.Drawing:
+                        console.log(">>", msg);
+                        this.draw(msg.Username);
+                        break;
                     case Action.OwnerExit:
                         // 房主退出，返回大厅
                         console.log(">>", msg);
                         this.$router.back('/gamecenter');
                         break;
+                    case Action.Notice:
+                        //TODO
+                        $loading.hide();
+                        break;
                     default:
                         console.log(">>", msg);
                 }
             },
-
-            // // 抽卡或显示玩家正在抽卡
-            // draw: function (username) {
-            //     if (username === this.username) {
-            //         // 自己抽卡
-            //         alert("点击确定抽卡");
-            //         this.send({
-            //             Action: Action.DoDraw
-            //         })
-            //     } else {
-            //         // TODO 显示某玩家正在抽卡
-            //         console.log(">> 玩家:", this.username, "正在抽卡...")
-            //     }
-            // },
+            // 抽卡或显示玩家正在抽卡
+            draw: function (username) {
+                if (username === this.username) {
+                    $dialog.alert({
+                        theme: 'ios',
+                        title: this.username + "的回合",
+                        content: '点击抽卡',
+                        okText: '抽'
+                    }).then(() => {
+                        this.send({
+                            Action: Action.DoDraw
+                        })
+                    })
+                } else {
+                    console.log(">> 玩家:", this.username, "正在抽卡...");
+                    $loading.show("玩家:" + this.username + "正在抽卡...")
+                }
+            },
             // 更新游戏信息
             renewGameInfo: function (data) {
                 this.sake = data.Sake;
@@ -431,12 +445,12 @@
                 this.remain = data.RemainCard.length;
                 this.$set(this, 'players', data.Players);
                 // 设置玩家自己的手牌
-                for (let p in data.Players) {
+                this.players.forEach(p => {
                     if (p.Username === this.username) {
-                        this.$set(this, "hand", data.Cards);
-                        break;
+                        this.$set(this, "hand", p.Cards);
                     }
-                }
+                });
+
             },
         },
         mounted() {
