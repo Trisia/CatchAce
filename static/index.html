@@ -1,88 +1,578 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>Catch Ace</title>
     <meta charset="UTF-8">
-    <title>Hello</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-    <style type="text/css">
-        .room {
-            margin: 5px;
-            padding: 2px;
-            border: 1px solid #000000;
-            width: 70px;
-            display: inline-block;
-        }
-        .border{
-            margin: 3px;
-            padding: 2px;
-            border: 1px solid #000000;
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://unpkg.com/vonic@2.0.0-beta.11/dist/vonic.min.css">
+    <script src="https://unpkg.com/axios@0.15.3/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/vue@2.1.10/dist/vue.min.js"></script>
+    <script src="https://unpkg.com/vue-router@2.2.1/dist/vue-router.min.js"></script>
+    <script src="https://unpkg.com/vuex@2.2.1/dist/vuex.min.js"></script>
+    <script src="https://unpkg.com/vonic@2.0.0-beta.11/dist/vonic.min.js"></script>
+    <style>
+        .poke {
+            width: 50px;
+            height: 70px;
         }
 
-        .box {
-            margin: 3px;
-            padding: 2px;
-            border: 1px solid #000000;
-            display: inline-block;
+        .poke-before {
+            margin-left: -35px;
+            width: 50px;
+            height: 70px;
         }
     </style>
 </head>
 <body>
-<div id="app">
-    <div id="gameCenter" v-if="status == 'Offline' || status == 'Online'">
-        <div>
-            用户名: <input type="text" v-model="username">
-            <button @click="checkAndConnect">连接</button>
-        </div>
-        <div v-if="status == 'Online'">
-            <div>
-                <p>创建房间:</p>
-                <input type="text" v-model="newRoomName">
-                <button @click="createRoom">创建</button>
-            </div>
-            <div>
-                <p>房间列表:</p>
-                <div class="room"
-                     v-for="room in roomList"
-                     :title="roomDesp(room)"
-                     @click="join(room)">
-                    <p>{{room.roomName}}</p>
-                    <p>{{room.status}}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div id="game">
-        <div id="controller" v-if="status != 'Offline' && status != 'Online'">
-            <h1>房间: {{gameVal.roomName}}</h1>
-            <button v-if="gameVal.roomOwner && status != 'Gaming'" @click="restartGame">开始游戏</button>
-            <button @click="exit">离开房间</button>
-        </div>
-        <div id="roomPlayers" v-if="status == 'InRoom'">
-            <p>房间中玩家:</p>
-            <div class="box" v-for="p in gameVal.players">{{p.Username}}</div>
-        </div>
-        <div id="gameContent" v-if="status == 'Gaming' || status == 'End'">
-            <div id="gameStatus" class="border">
-                <div class="box">扑克: <span>{{gameVal.remain}}/20</span></div>
-                <div class="box">酒: <span>sake</span></div>
-            </div>
-            <div id="player" class="border">
-                <p>玩家卡牌:</p>
-                <div class="box" v-for="p in gameVal.players">
-                    <div class="box">{{p.Username}} 的卡牌:</div>
-                    <div class="box" v-for="card in p.Cards">{{card}}</div>
-                </div>
-            </div>
-            <div id="hand" class="border">
-                <p>手牌:</p>
-                <div class="box" v-for="card in gameVal.hand">{{card}}</div>
-            </div>
-        </div>
-    </div>
-</div>
+
+<von-app></von-app>
 
 
 </body>
-<script src="index.js"></script>
+
+<script type="text/x-template" id="index">
+    <div class="page has-navbar" v-nav="{ title: '摸A' }">
+        <div class="page-content text-center">
+            <von-input
+                    type="text"
+                    v-model="username"
+                    placeholder="请输入玩家名"
+                    label="玩家名">
+            </von-input>
+
+            <md-button class="button button-positive button-block"
+                       @click.native="checkConn">
+                连接服务器
+            </md-button>
+
+        </div>
+    </div>
+</script>
+
+<script type="text/x-template" id="gameCenter">
+    <div class="page has-navbar" v-nav="{ title: '游戏大厅', showBackButton: true, onBackButtonClick: logout }">
+        <div class="page-content text-center">
+            <div class="padding">玩家: {{ this.$store.state.username }}
+                <von-input
+                        type="text"
+                        v-model="newRoomName"
+                        placeholder="请输入要创建的房间名称"
+                        label="房间名">
+                </von-input>
+                <md-button class="button button-positive button-block"
+                           @click.native="createRoom">
+                    <i class="icon ion-home"></i> 创建房间
+                </md-button>
+            </div>
+            <div style="padding-top: 10px">
+                <p>房间列表:</p>
+                <list>
+                    <div v-for="r in roomList">
+                        <hl-item class="item-icon-right"
+                                 style="text-align: left"
+                                 @click.native="join(r)">
+                            {{r.roomName}}
+                            <div class="item-note">
+                                {{r.status}}
+                            </div>
+                            <span class="icon ion-ios-arrow-right"></span>
+                        </hl-item>
+                    </div>
+                    <div style="height: 100px"></div>
+                </list>
+            </div>
+        </div>
+    </div>
+</script>
+
+<script type="text/x-template" id="gaming">
+    <div class="page has-navbar" v-nav="{ title: '游戏房间: ' + roomName, showBackButton: true, onBackButtonClick: exit }">
+        <div class="page-content">
+            <div v-if="status == 'InRoom'">
+                <div style="text-align: left;margin-top: 10px; padding-bottom: 10px;border-bottom: #888888 1px solid">
+                    <div class="item item-divider">
+                        玩家列表
+                    </div>
+                    <button style="margin-left: 13px" class="button button-balanced"
+                            v-for="p in players">{{p.Username}}</button>
+                </div>
+                <md-button v-if="owner"
+                           class="button button-calm button-block"
+                           @click.native="restartGame">
+                    开始游戏
+                </md-button>
+                <p v-else>等待房主开始游戏...</p>
+            </div>
+            <div v-else>
+                <!-- 提示窗 -->
+                <div class="item">
+                    <div class="button button-calm button-outline" style="width: 45%;float: left">
+                        剩余卡牌:{{ remain }}/20
+                    </div>
+                    <div class="button button-calm button-outline" style="width: 48%;float: right">
+                        已加酒: {{ sake }}</div>
+                </div>
+                <!-- 游戏信息窗口 -->
+                <div class="item" v-for="p in players">
+                    <h4 style="margin-bottom: 7px">{{p.Username}}
+                        <badge style="background: lightslategray" v-if="p.Username == username" num="我"></badge>
+                    </h4>
+                    <div>
+                        <img v-for="(c,index) in p.Cards"
+                             :src="imgLoc(c)"
+                             :class="[index=='0'? 'poke':'poke-before']">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+<script>
+
+    /*
+        游戏消息类型
+     */
+    const Action = {
+        ReqUseQ: "ReqUseQ",     // - 询问是否使用Q跳过抽卡
+        RespUseQ: "RespUseQ",   // - 响应已经是否使用Q跳过抽卡
+        UsedQ: "UsedQ",         // - 广播某玩家已经使用了Q跳过抽卡
+        Drawing: "Drawing",     // - 玩家正在抽卡
+        DoDraw: "DoDraw",       // - 玩家触发抽卡（客户端发起）
+        Notice: "Notice",       // - 通知某玩家抽到卡
+        RequestJ: "RequestJ",   // - 请求加酒
+        AddSake: "AddSake",     // - 公告加酒数量
+        Punish: "Punish",       // - 罚酒
+        StartGame: "StartGame", // - 开始游戏
+        EndGame: "EndGame",     // - 游戏结束
+        OwnerExit: "OwnerExit", // - 房主退出了游戏
+        GameInfo: "GameInfo",   // - 游戏状态广播
+    };
+
+    const GameStatus = {
+        InRoom: 'InRoom',
+        Gaming: 'Gaming'
+    };
+
+    var state = {
+        username: "",
+        conn: ''
+    };
+    var mutations = {
+        setUsername: function (state, username) {
+            state.username = username;
+            sessionStorage['username'] = username;
+        }
+    };
+    var getters = {
+        getUsername: function (state) {
+            if (sessionStorage['username']) {
+                state.username = sessionStorage['username'];
+            }
+            return state.username;
+        }
+    };
+
+    const Index = {
+        template: '#index',
+        data() {
+            return {}
+        },
+        methods: {
+            checkConn: function () {
+                if (!this.username) {
+                    $toast.show('玩家名不能为空');
+                    return
+                }
+                console.log(">> Set Username:", this.username);
+                axios.get('/userExist?username=' + this.username).then(res => {
+                    if (res.data) {
+                        $toast.show("用户名: " + this.username + " 已存在，换一个试试吧");
+                        return
+                    }
+                    this.$store.state.conn = new WebSocket("ws://" + document.location.host + "/cnn");
+                    this.$store.state.conn.onopen = () => {
+                        // 连接后的一条消息发送用户名
+                        this.$store.state.conn.send(this.username);
+                    };
+                    this.$router.push('/gamecenter');
+                });
+            },
+        },
+        computed: {
+            username: {
+                get() {
+                    return this.$store.getters.getUsername
+                },
+                set(username) {
+                    this.$store.commit('setUsername', username)
+                }
+            }
+        },
+        mounted: function () {
+            if (!window["WebSocket"]) {
+                $toast.show("您的浏览器不支持！");
+                return
+            }
+            console.log(">> WebSocket支持: OK")
+        }
+    };
+    const GameCenter = {
+        template: '#gameCenter',
+        data() {
+            return {
+                roomList: [],
+                newRoomName: '',
+                roomInterval: -1
+            }
+        },
+        computed: {
+            username: function () {
+                return this.$store.getters.getUsername
+            }
+        },
+
+        methods: {
+            logout: function () {
+                console.log(">> 玩家:", this.username, "退出登录");
+                // 断开连接
+                this.$store.state.conn.close();
+                this.$router.back('/')
+            },
+            // 加入游戏
+            join: function (r) {
+                let roomName = r.roomName;
+                if (r.status !== 'wait') {
+                    $toast.show('房间:' + roomName +" 游戏中", 3000);
+                    return
+                }
+                console.log(">> Cliven Join:", roomName);
+                let data = new FormData();
+                data.append('username', this.username);
+                data.append('roomName', roomName);
+                axios.post("/CatchAce/join", data).then(res => {
+                    this.$router.push({
+                        path: "/gaming", query: {
+                            owner: false,
+                            roomName: roomName
+                        }
+                    });
+                }).catch(error => {
+                    if (error.response) {
+                        $dialog.alert({content: error.response.data});
+                    }
+                })
+            },
+            // 创建房间
+            createRoom: function () {
+                if (!this.newRoomName) {
+                    $dialog.alert({content: '房间名不能为空'});
+                    return;
+                }
+                console.log(">> Create Room:", this.newRoomName);
+                let data = new FormData();
+                data.append('username', this.username);
+                data.append('roomName', this.newRoomName);
+                axios.post("/CatchAce/create", data).then(res => {
+                    this.$router.push({
+                        path: "/gaming", query: {
+                            owner: true,
+                            roomName: this.newRoomName
+                        }
+                    });
+                }).catch(error => {
+                    if (error.response) {
+                        $dialog.alert({content: error.response.data});
+                    }
+                })
+            },
+            // 定期拉取房间列表
+            pullRoomInterval: function () {
+                // 调用时立刻拉取
+                this.pullRoom();
+                // 定期拉取游戏房间列表
+                this.roomInterval = setInterval(() => {
+                    this.pullRoom();
+                }, 1000)
+            },
+            // 拉取房间列表
+            pullRoom: function () {
+                axios.get('/CatchAce')
+                    .then((response) => {
+                        this.roomList = (!response.data) ? [] : response.data;
+                    })
+                    .catch((error) => {
+                        console.log(error.response);
+                    });
+            },
+        },
+        mounted() {
+            if (!this.$store.state.conn) {
+                // 没连接返还首页
+                this.$router.back("/");
+            }
+            // 定期拉取房间列表
+            this.pullRoomInterval();
+        },
+        destroyed() {
+            if (this.roomInterval !== -1) {
+                // 清除定时器
+                clearInterval(this.roomInterval);
+            }
+        }
+    };
+    const Gaming = {
+        template: '#gaming',
+        data() {
+            return {
+                roomName: this.$route.query.roomName,
+                owner: this.$route.query.owner, // 是否是房主
+                players: [],            // 房间中玩家
+                sake: 1,                // 加酒信息
+                currentPlayerIndex: 0,  // 但前抽卡玩家
+                direction: 1,           // 抽牌方向
+                remain: 20,             // 剩余卡牌数量
+                hand: [],               // 手牌
+                status: GameStatus.InRoom,       // 在房间中
+                popup: undefined,
+            };
+        },
+        computed: {
+            username: function () {
+                return this.$store.getters.getUsername
+            },
+            conn: function () {
+                return this.$store.state.conn;
+            }
+        },
+        methods: {
+            // 获取卡牌图片
+            imgLoc: function (card) {
+                let c = card.split(",");
+                return "resource/" + c[0] + c[1] + ".png";
+            },
+            // 开始/重开游戏
+            restartGame: function () {
+                axios.get('/CatchAce/start?roomName=' + this.roomName);
+            },
+
+            // 退出房间
+            exit: function () {
+                console.log(">>", this.username, "从房间", this.roomName, "退出");
+                // 从房间中移除
+                axios.delete('/CatchAce/player?' +
+                    'roomName=' + this.roomName +
+                    '&userName=' + this.username).finally(() => {
+                    this.$router.back('/gamecenter')
+                });
+            },
+            // 发送消息到服务端
+            send(msg) {
+                if (msg.Username === undefined) {
+                    msg.Username = this.username;
+                }
+                this.conn.send(JSON.stringify(msg));
+            },
+            onMsg: function (evt) {
+                // 序列化消息
+                let msg = JSON.parse(evt.data);
+                this.messageProcess(msg)
+            },
+            // 消息处理器
+            messageProcess: function (msg) {
+                switch (msg.Action) {
+                    case Action.GameInfo:
+                        // 同步游戏状态
+                        this.renewGameInfo(msg.Data);
+                        break;
+                    case Action.StartGame:
+                        // 开始游戏
+                        this.status = GameStatus.Gaming;
+                        break;
+                    // 抽卡指令
+                    case Action.Drawing:
+                        console.log(">>", msg);
+                        this.draw(msg.Username);
+                        break;
+                    case Action.OwnerExit:
+                        // 房主退出，返回大厅
+                        console.log(">>", msg);
+                        this.$router.back('/gamecenter');
+                        break;
+                    case Action.Notice:
+                        // 告知抽到的卡
+                        this.hitCard(msg);
+                        break;
+                    case Action.RequestJ:
+                        // 要求玩家加酒
+                        this.reqAddSake(msg);
+                        break;
+                    case Action.AddSake:
+                        // 加酒广播
+                        if (msg.Username !== this.username) {
+                            $toast.show(msg.Username + ' 加酒:' + msg.Data + "勺", 2000);
+                        }
+                        break;
+                    default:
+                        console.log(">>", msg);
+                }
+            },
+            // 加酒
+            reqAddSake(msg) {
+                console.log(">> 加酒:", msg);
+                let template = `
+                <div>
+                    <label><span style="font-size: 23px">壹勺</span><input checked name="Sake" style="width: 20px; margin-right: 10px" type="radio"  value="1" /></label>
+                    <label><span style="font-size: 23px">两勺</span><input name="Sake" style="width: 20px; margin-right: 10px" type="radio"  value="2" /></label>
+                    <label><span style="font-size: 23px">三勺</span><input name="Sake" style="width: 20px; margin-right: 10px" type="radio"  value="3" /></label>
+                </div>
+`;
+                let popup = $popup.fromTemplate(template, {
+                    title: "加酒",
+                    buttons: [
+                        {text: '确定(10s)'}
+                    ]
+                });
+
+                let interval = "";
+                popup.show().then(() => {
+                    let sakes = document.getElementsByName("Sake");
+                    sakes.forEach(s => {
+                        if (s.checked === true) {
+                            clearInterval(interval);
+                            console.log(">> Select:", parseInt(s.value));
+                            this.send({Action: Action.RequestJ, Data: parseInt(s.value)})
+                        }
+                    });
+                });
+                // 倒计时10s
+                let cnt = 10;
+                interval = setInterval(() => {
+                    cnt--;
+                    if (cnt === 0) {
+                        popup.hide();
+                        clearInterval(interval);
+                    }
+                    popup.buttons[0].text = "确定(" + cnt + "s)";
+                }, 1000);
+
+            },
+
+            // 通告抽到了的卡片
+            hitCard(msg) {
+                $loading.hide();
+                let template = `
+                  <p style="margin-bottom: 0; text-align: center;"><img id="hitCardImg" src="` + this.imgLoc(msg.Data) + `"></p>
+                  <p style="margin-bottom: 0; text-align: center;">效果: ` + this.cardEffectDesp(msg.Data) + `</p>
+                `;
+
+                let title = "";
+                if (msg.Username === this.username) {
+                    title = "抽到卡片(3s)"
+                } else {
+                    title = msg.Username + " 抽到卡片(3s)";
+                }
+                let popup = $popup.fromTemplate(template, {
+                    title: title
+                });
+
+                popup.show();
+                let cnt = 3;
+                let interval = setInterval(() => {
+                    cnt--;
+                    if (cnt === 0) {
+                        clearInterval(interval);
+                        popup.hide();
+                    }
+                    if (msg.Username === this.username) {
+                        title = "抽到卡片(" + cnt + "s)";
+                    } else {
+                        title = msg.Username + " 抽到卡片(" + cnt + "s)";
+                    }
+                    popup.title = title;
+                }, 1000)
+            },
+            // 卡片效果描述
+            cardEffectDesp(card) {
+                let c = card.split(",");
+                switch (c[0]) {
+                    case "10":
+                        return "抽卡翻转";
+                    case "J":
+                        return "加酒";
+                    case "Q":
+                        return "免抽卡";
+                    case "K":
+                        return "罚酒";
+                    case "A":
+                        return "Ace"
+                }
+            },
+            // 抽卡或显示玩家正在抽卡
+            draw: function (username) {
+                if (username === this.username) {
+                    $dialog.alert({
+                        theme: 'ios',
+                        title: this.username + "的回合",
+                        content: '点击抽卡',
+                        okText: '抽'
+                    }).then(() => {
+                        // 设置超时，防止阴影遮罩失效
+                        setTimeout(() => {
+                            this.send({
+                                Action: Action.DoDraw
+                            })
+                        }, 700);
+                    })
+                } else {
+                    console.log(">> 玩家:", this.username, "正在抽卡...");
+                    $loading.show("玩家:" + this.username + "正在抽卡...")
+                }
+            },
+            // 更新游戏信息
+            renewGameInfo: function (data) {
+                this.sake = data.Sake;
+                this.currentPlayerIndex = data.CurrentPlayerIndex;
+                this.direction = data.Direction;
+                this.remain = data.RemainCard.length;
+                this.$set(this, 'players', data.Players);
+                // 设置玩家自己的手牌
+                this.players.forEach(p => {
+                    if (p.Username === this.username) {
+                        this.$set(this, "hand", p.Cards);
+                    }
+                });
+
+            },
+        },
+        mounted() {
+            if (!this.conn) {
+                this.$router.back("/");
+            }
+            this.conn.onmessage = this.onMsg;
+        },
+        destroyed() {
+            this.conn.onmessage = null;
+        }
+    };
+
+    const routes = [
+        {path: '/', component: Index},
+        {path: '/gamecenter', component: GameCenter},
+        {path: '/gaming', component: Gaming},
+    ];
+
+    // Store
+    var store = new Vuex.Store({
+        state: state,
+        getters: getters,
+        mutations: mutations
+    });
+    // Start up
+    Vue.use(Vonic.app, {
+        routes: routes,
+        store: store
+    })
+</script>
 </html>

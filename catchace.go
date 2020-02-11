@@ -135,6 +135,7 @@ func (r *CatchAce) shuffleCard() {
 		"D", // 方块:D-Diamond
 	}
 	cardNumbers := []string{"10", "J", "Q", "K", "A"}
+	//cardNumbers := []string{"J"}
 	// 清空已有卡
 	r.cards = []string{}
 	for _, num := range cardNumbers {
@@ -189,7 +190,7 @@ func (r *CatchAce) Run() {
 			r.status = "End"
 			break
 		}
-		time.Sleep(3 * time.Second)
+		time.Sleep(7 * time.Second)
 	}
 }
 

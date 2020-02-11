@@ -16,46 +16,67 @@
 </head>
 <body>
 <von-app></von-app>
-<style>
-    .page.has-navbar .page-content {
-        padding-top: 100px;
-    }
 
-    .ft {
-        padding: 10px 0 0 0;
-        z-index: 999;
-        width: 100%;
-        height: 15%;
-        position: fixed;
-        left: 0;
-        bottom: 0;
-    }
-</style>
 <script type="text/x-template" id="index">
     <div class="page has-navbar" v-nav="{title: '测试'}">
         <div class="page-content">
-            <scroll style="height: 78%;margin-top: 80px">
-                <div class="item">
-                    <h2>Cliven</h2>
-                    <img src="../resource/10D.png" width="50px" height="70px" alt="">
-                    <img src="../resource/10D.png" style="margin-left: -35px" width="40px" height="70px" alt="">
-                    <img src="../resource/10D.png" style="margin-left: -35px" width="50px" height="70px" alt="">
-                </div>
-            </scroll>
-
-            <div class="ft item" style="background: lightslategray">
-                <p>Cliven 的手牌:</p>
-                <img src="../resource/10D.png" width="50px" height="70px" alt="">
-                <img src="../resource/10D.png"  width="50px" height="70px" alt="">
-                <img src="../resource/10D.png"  width="50px" height="70px" alt="">
-            </div>
+            <md-button
+                    class="button button-calm button-block"
+                    @click.native="giao">搞
+            </md-button>
         </div>
+
     </div>
 </script>
+
 <script>
+
     const Index = {
         template: '#index',
-        methods: {}
+        components: {},
+        data() {
+        },
+        methods: {
+            giao() {
+                let template = `
+<div>
+<label><span style="font-size: 23px">壹勺</span><input checked name="Fruit" style="width: 20px; margin-right: 10px" type="radio"  value="1" /></label>
+<label><span style="font-size: 23px">两勺</span><input name="Fruit" style="width: 20px; margin-right: 10px" type="radio"  value="2" /></label>
+<label><span style="font-size: 23px">三勺</span><input name="Fruit" style="width: 20px; margin-right: 10px" type="radio"  value="3" /></label>
+</div>
+`;
+
+                let popup = $popup.fromTemplate(template, {
+                    title: "加酒",
+                    buttons: [
+                        {text: '确定(10s)'}
+                    ]
+                });
+                popup.show().then(() => {
+                    let bank = document.getElementsByName("Fruit");
+                    bank.forEach(f => {
+                        if (f.checked === true) {
+                            console.log(">> Select:", f.value);
+                        }
+                    });
+                });
+                console.log(popup);
+                let cnt = 10;
+                let interval = setInterval(() => {
+                    cnt--;
+                    if (cnt === 0) {
+                        popup.hide();
+                        clearInterval(interval);
+                    }
+                    popup.buttons[0].text = "确定(" + cnt + "s)";
+
+                }, 1000);
+
+            }
+        },
+        mounted() {
+
+        }
     };
 
     const routes = [

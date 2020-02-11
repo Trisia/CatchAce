@@ -9,6 +9,8 @@ import (
 // processCard 处理抽到的卡
 // return true 表示游戏结束， false表示游戏继续
 func (r *CatchAce) processCard(card string, p *Player) bool {
+	// 在发送指令之前休眠给与客户端处理时间
+	time.Sleep(4000 * time.Millisecond)
 	// 取出抽到卡的数组：10，J，Q，K，A
 	key := strings.Split(card, ",")[0]
 	r.counter[key] += 1
@@ -60,17 +62,18 @@ func reqAddAke(r *CatchAce, p *Player) {
 	resp, err := p.RequestTT(Msg{
 		Username: p.username,
 		Action:   "RequestJ",
-	}, 10*time.Second)
+	}, 15*time.Second)
 	added := 1
 	if err == nil {
 		// 如果玩家没有处理没有超时，那么取得 请求加酒值。
-		num, ok := resp.Data.(int)
+		num, ok := resp.Data.(float64)
 		if ok {
-			added = num
+			added = int(num)
 		}
 	} else {
-		log.Printf("玩家: [%s] 加酒超时...")
+		log.Printf("玩家: [%s] 加酒超时...", p.username)
 	}
+
 	r.sake += added
 	// 广播加酒信息
 	r.Broadcast(Msg{
