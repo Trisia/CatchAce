@@ -11,6 +11,9 @@ func routeConfig(r *gin.Engine) {
 	r.GET("/cnn", func(c *gin.Context) {
 		useConnect(c.Writer, c.Request)
 	})
+	r.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/game/index.html")
+	})
 	// 摸A游戏路由
 	//
 	r.POST("/CatchAce/create", createCatchAce)
