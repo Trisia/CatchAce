@@ -78,9 +78,11 @@ go run main/main.go -port 80
 ```
 
 或编译
+
 ```cmd
 go build -o ./target/CatchAce.exe ./main/
 ```
+> 静态资源打包请参考: 静态资源打包
 
 运行`target`目录下的`CatchAce.exe`。
 
@@ -99,3 +101,18 @@ http://localhost/
 - 后台开发语言: **Golang**
 - HTTP 框架: **gin**
 - websocket 框架: **gorilla/websocket**
+
+
+
+### 静态资源打包
+
+首先安装静态资源打包组件
+```
+go get github.com/go-bindata/go-bindata/...
+go get github.com/elazarl/go-bindata-assetfs/...
+```
+
+打包静态资源
+```
+go-bindata-assetfs -pkg catchace static/...
+```

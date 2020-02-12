@@ -6,7 +6,8 @@ import (
 )
 
 func RouteConfig(r *gin.Engine) {
-	r.StaticFS("/game", http.Dir("static"))
+	//r.StaticFS("/game", http.Dir("static"))
+	r.StaticFS("/game", assetFS())
 	// 配置Websocket 连接，与客户端建立连接
 	r.GET("/cnn", func(c *gin.Context) {
 		useConnect(c.Writer, c.Request)
