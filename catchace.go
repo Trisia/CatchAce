@@ -135,7 +135,6 @@ func (r *CatchAce) shuffleCard() {
 		"D", // 方块:D-Diamond
 	}
 	cardNumbers := []string{"10", "J", "Q", "K", "A"}
-	//cardNumbers := []string{"J"}
 	// 清空已有卡
 	r.cards = []string{}
 	for _, num := range cardNumbers {
@@ -179,18 +178,15 @@ func (r *CatchAce) Run() {
 		// 7. 处理抽到的卡。
 		endOfGame := r.processCard(card, nextPlayer)
 		if endOfGame {
-			if r.sake == 0 {
-				r.sake = 1
-			}
 			r.Broadcast(Msg{
 				Username: nextPlayer.username,
 				Action:   "EndOfGame",
 				Data:     r.sake,
 			})
-			r.status = "End"
+			r.status = "wait"
 			break
 		}
-		time.Sleep(7 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }
 

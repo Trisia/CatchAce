@@ -24,6 +24,11 @@
                     class="button button-calm button-block"
                     @click.native="giao">搞
             </md-button>
+
+            <md-button
+                    class="button button-calm button-block"
+                    @click.native="giao2">搞2
+            </md-button>
         </div>
 
     </div>
@@ -37,6 +42,34 @@
         data() {
         },
         methods: {
+            giao2() {
+                let options = {
+                    title: '提示',
+                    buttons: [
+                        {text: '取消(8s)'},
+                        {text: '使用'},
+                    ]
+                };
+                let popup = $popup.fromTemplate('<p style="margin-bottom: 0; text-align: center;">是否使用Q跳过抽卡</p>', options);
+                popup.show().then((buttonIndex) => {
+                    if (buttonIndex === 0 || buttonIndex === undefined) {
+                        console.log(">> 不跳过抽卡...");
+                        return
+                    }
+                    console.log(">> 发送消息，跳过抽卡");
+                });
+
+                // 倒计时10s
+                let cnt = 8;
+                let interval = setInterval(() => {
+                    cnt--;
+                    if (cnt === 0) {
+                        popup.hide();
+                        clearInterval(interval);
+                    }
+                    popup.buttons[0].text = "取消(" + cnt + "s)";
+                }, 1000);
+            },
             giao() {
                 let template = `
 <div>

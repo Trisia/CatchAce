@@ -106,17 +106,24 @@
             </div>
             <div v-else>
                 <!-- 提示窗 -->
-                <div class="item">
-                    <div class="button button-calm button-outline" style="width: 45%;float: left">
-                        剩余卡牌:{{ remain }}/20
+                <div class="item" style="text-align: center">
+                    <div class="button button-calm button-outline" style="width: 30%">
+                        卡牌:{{ remain }}/20
                     </div>
-                    <div class="button button-calm button-outline" style="width: 48%;float: right">
-                        已加酒: {{ sake }}</div>
+                    <div class="button button-energized button-outline" style="width: 30%">
+                        Ace: {{ remainA }}/4
+                    </div>
+                    <div class="button button-calm button-outline" style="width: 30% ">
+                        加酒: {{ sake }}</div>
                 </div>
                 <!-- 游戏信息窗口 -->
                 <div class="item" v-for="p in players">
-                    <h4 style="margin-bottom: 7px">{{p.Username}}
+                    <h4 style="margin-bottom: 7px">
                         <badge style="background: lightslategray" v-if="p.Username == username" num="我"></badge>
+                        {{p.Username}}&nbsp;&nbsp;
+                        <span v-if="p.RemainQ > 0">剩余跳过次数:<badge :num="p.RemainQ"></badge></span>
+                        &nbsp;&nbsp;
+                        <badge style="background: deepskyblue" v-if="p.IsNext" num="下一个"></badge>
                     </h4>
                     <div>
                         <img v-for="(c,index) in p.Cards"
@@ -145,7 +152,7 @@
         AddSake: "AddSake",     // - 公告加酒数量
         Punish: "Punish",       // - 罚酒
         StartGame: "StartGame", // - 开始游戏
-        EndGame: "EndGame",     // - 游戏结束
+        EndOfGame: "EndOfGame",     // - 游戏结束
         OwnerExit: "OwnerExit", // - 房主退出了游戏
         GameInfo: "GameInfo",   // - 游戏状态广播
     };
@@ -244,7 +251,7 @@
             join: function (r) {
                 let roomName = r.roomName;
                 if (r.status !== 'wait') {
-                    $toast.show('房间:' + roomName +" 游戏中", 3000);
+                    $toast.show('房间:' + roomName + " 游戏中", 3000);
                     return
                 }
                 console.log(">> Cliven Join:", roomName);
@@ -333,9 +340,8 @@
                 currentPlayerIndex: 0,  // 但前抽卡玩家
                 direction: 1,           // 抽牌方向
                 remain: 20,             // 剩余卡牌数量
-                hand: [],               // 手牌
                 status: GameStatus.InRoom,       // 在房间中
-                popup: undefined,
+                remainA: 4,
             };
         },
         computed: {
@@ -347,6 +353,15 @@
             }
         },
         methods: {
+            // 重置游戏
+            rest() {
+                this.sake = 1;                // 加酒信息
+                this.currentPlayerIndex = 0;  // 但前抽卡玩家
+                this.direction = 1;           // 抽牌方向
+                this.remain = 20;            // 剩余卡牌数量
+                this.status = GameStatus.InRoom;      // 在房间中
+                this.remainA = 4;
+            },
             // 获取卡牌图片
             imgLoc: function (card) {
                 let c = card.split(",");
@@ -414,9 +429,92 @@
                             $toast.show(msg.Username + ' 加酒:' + msg.Data + "勺", 2000);
                         }
                         break;
+                    case Action.ReqUseQ:
+                        // 请求使用Q跳过抽卡
+                        this.reqUseQ(msg);
+                        break;
+                    case Action.Punish:
+                        // 罚酒
+                        this.punish(msg);
+                        break;
+                    case Action.EndOfGame:
+                        // 游戏结束
+                        this.gameOver(msg);
+                        break;
                     default:
                         console.log(">>", msg);
                 }
+            },
+            // 游戏结束
+            gameOver(msg) {
+                let popup = $popup.fromTemplate(
+                    `
+<p style="margin-bottom: 0; text-align: center;"><span style="font-size: 23px">罚酒: ` + this.sake + ` 勺</span></p>
+<p style="margin-bottom: 0; text-align: center;">点击确定返还房间</p>`, {
+                        title: msg.Username + ' Get Final Ace',
+                        buttons: [{text: '确定'}]
+                    });
+                popup.show().then(() => {
+                    // 状态切换至在房间中
+                    this.rest();
+                });
+
+            },
+            // 罚酒
+            punish(msg) {
+                let popup = $popup.fromTemplate(
+                    `<p style="margin-bottom: 0; text-align: center;"><span style="font-size: 23px">` + msg.Data + ` 勺</span></p>`, {
+                        title: msg.Username + ' 罚酒',
+                        buttons: [{text: '确定(3s)'}]
+                    });
+                let interval = undefined;
+                popup.show().then(() => {
+                    clearInterval(interval);
+                });
+                // 倒计时3s
+                let cnt = 3;
+                interval = setInterval(() => {
+                    cnt--;
+                    if (cnt === 0) {
+                        popup.hide();
+                        clearInterval(interval);
+                    }
+                    popup.buttons[0].text = "确定(" + cnt + "s)";
+                }, 1000);
+            },
+            // 是否使用Q
+            reqUseQ(msg) {
+                let options = {
+                    title: '提示',
+                    buttons: [
+                        {text: '取消(8s)'},
+                        {text: '使用'},
+                    ]
+                };
+                let tmpl = `
+<p style="margin-bottom: 0; text-align: center;">是否使用Q跳过抽卡</p>
+`;
+                let interval = undefined;
+                let popup = $popup.fromTemplate(tmpl, options);
+                popup.show().then((buttonIndex) => {
+                    clearInterval(interval);
+                    if (buttonIndex === 0 || buttonIndex === undefined) {
+                        this.send({Action: Action.RespUseQ, Data: false});
+                        return
+                    }
+                    this.send({Action: Action.RespUseQ, Data: true});
+                });
+
+                // 倒计时8s
+                let cnt = 8;
+                interval = setInterval(() => {
+                    cnt--;
+                    if (cnt === 0) {
+                        popup.hide();
+                        clearInterval(interval);
+                    }
+                    popup.buttons[0].text = "取消(" + cnt + "s)";
+                }, 1000);
             },
             // 加酒
             reqAddSake(msg) {
@@ -441,7 +539,6 @@
                     sakes.forEach(s => {
                         if (s.checked === true) {
                             clearInterval(interval);
-                            console.log(">> Select:", parseInt(s.value));
                             this.send({Action: Action.RequestJ, Data: parseInt(s.value)})
                         }
                     });
@@ -469,7 +566,7 @@
 
                 let title = "";
                 if (msg.Username === this.username) {
-                    title = "抽到卡片(3s)"
+                    title = "抽到卡片(3s)";
                 } else {
                     title = msg.Username + " 抽到卡片(3s)";
                 }
@@ -498,7 +595,7 @@
                 let c = card.split(",");
                 switch (c[0]) {
                     case "10":
-                        return "抽卡翻转";
+                        return "抽卡顺序翻转";
                     case "J":
                         return "加酒";
                     case "Q":
@@ -506,7 +603,8 @@
                     case "K":
                         return "罚酒";
                     case "A":
-                        return "Ace"
+                        this.remainA--;
+                        return `Ace 剩余: <badge num="` + this.remainA + `"></badge>`;
                 }
             },
             // 抽卡或显示玩家正在抽卡
@@ -536,15 +634,37 @@
                 this.currentPlayerIndex = data.CurrentPlayerIndex;
                 this.direction = data.Direction;
                 this.remain = data.RemainCard.length;
-                this.$set(this, 'players', data.Players);
                 // 设置玩家自己的手牌
-                this.players.forEach(p => {
-                    if (p.Username === this.username) {
-                        this.$set(this, "hand", p.Cards);
+                data.Players.forEach(p => {
+                    p.RemainQ = 0;
+                    p.IsNext = false;
+                    if (p.Cards) {
+                        p.Cards.forEach(card => {
+                            let c = card.split(",");
+                            if (c[0] === 'Q' && c.length === 2) {
+                                p.RemainQ++;
+                            }
+                        })
                     }
                 });
 
+                // 下一个抽卡的玩家
+                let len = data.Players.length;
+                let nextIndex = this.currentPlayerIndex + this.direction;
+                if (nextIndex < 0) {
+                    nextIndex = len - 1;
+                } else if (nextIndex >= len) {
+                    nextIndex = 0;
+                }
+                data.Players[nextIndex].IsNext = true;
+
+                if (this.direction < 0) {
+                    // 数组反转，由于抽卡方向逆向
+                    data.Players = data.Players.reverse();
+                }
+                this.$set(this, 'players', data.Players);
             },
+
         },
         mounted() {
             if (!this.conn) {

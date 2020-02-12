@@ -34,15 +34,7 @@ func (r *CatchAce) processCard(card string, p *Player) bool {
 // 抽到A判断是否结束游戏
 func ace(r *CatchAce, p *Player) bool {
 	cnt := r.counter["A"]
-	if cnt == 4 {
-		r.Broadcast(Msg{
-			Username: p.username,
-			Action:   "Punish",
-			Data:     r.counter["K"],
-		})
-		return true
-	}
-	return false
+	return cnt == 4
 }
 
 // 自罚
