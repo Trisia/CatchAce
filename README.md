@@ -72,7 +72,17 @@ A卡片比较特殊，它是结束游戏的卡片。
 
 ## 游戏启动说明
 
-运行 `go main.go`或编译后运行main.exe
+运行 
+```cmd
+go run main/main.go -port 80
+```
+
+或编译
+```cmd
+go build -o ./target/CatchAce.exe ./main/
+```
+
+运行`target`目录下的`CatchAce.exe`。
 
 启动后将会监听80端口，请使用移动设备浏览器访问该网页。
 

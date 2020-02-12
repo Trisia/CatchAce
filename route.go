@@ -1,11 +1,11 @@
-package main
+package catchace
 
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
-func routeConfig(r *gin.Engine) {
+func RouteConfig(r *gin.Engine) {
 	r.StaticFS("/game", http.Dir("static"))
 	// 配置Websocket 连接，与客户端建立连接
 	r.GET("/cnn", func(c *gin.Context) {

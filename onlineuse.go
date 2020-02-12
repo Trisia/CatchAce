@@ -1,4 +1,4 @@
-package main
+package catchace
 
 import (
 	"github.com/gorilla/websocket"

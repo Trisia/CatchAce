@@ -1,4 +1,4 @@
-package main
+package catchace
 
 import (
 	"encoding/json"
