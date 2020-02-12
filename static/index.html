@@ -408,7 +408,7 @@
                     // 抽卡指令
                     case Action.Drawing:
                         console.log(">>", msg);
-                        this.draw(msg.Username);
+                        this.draw(msg);
                         break;
                     case Action.OwnerExit:
                         // 房主退出，返回大厅
@@ -608,8 +608,8 @@
                 }
             },
             // 抽卡或显示玩家正在抽卡
-            draw: function (username) {
-                if (username === this.username) {
+            draw: function (msg) {
+                if (msg.Username === this.username) {
                     $dialog.alert({
                         theme: 'ios',
                         title: this.username + "的回合",
@@ -625,7 +625,7 @@
                     })
                 } else {
                     console.log(">> 玩家:", this.username, "正在抽卡...");
-                    $loading.show("玩家:" + this.username + "正在抽卡...")
+                    $loading.show("玩家:" + msg.Username + "正在抽卡...")
                 }
             },
             // 更新游戏信息
